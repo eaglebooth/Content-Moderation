@@ -6,6 +6,14 @@ import Link from 'next/link'
 
 type StatusFilter = 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'NEEDS_REVIEW'
 
+const statusLabels: Record<StatusFilter, string> = {
+  ALL: 'All',
+  PENDING: 'Pending',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+  NEEDS_REVIEW: 'Needs Review'
+}
+
 export default function ReviewPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [filteredSubmissions, setFilteredSubmissions] = useState<Submission[]>([])
@@ -55,9 +63,8 @@ export default function ReviewPage() {
       const client = getGenLayerClient()
       await client.initialize()
       const txHash = await client.appealSubmission(selectedSubmission.id, appealReason)
-      setAppealResult(`Appeal submitted successfully! Transaction hash: ${txHash}`)
+      setAppealResult(`Appeal submitted successfully. Transaction hash: ${txHash}`)
       setAppealReason('')
-      // Reload data to show updated status
       await loadData()
       setSelectedSubmission(null)
     } catch (error) {
@@ -86,9 +93,19 @@ export default function ReviewPage() {
     })
   }
 
-  const truncateContent = (content: string, maxLength = 150) => {
+  const truncateContent = (content: string, maxLength = 96) => {
     if (content.length <= maxLength) return content
     return content.substring(0, maxLength) + '...'
+  }
+
+  const parseCategoryScores = () => {
+    if (!selectedSubmission?.category_scores) return []
+    try {
+      const parsed = JSON.parse(selectedSubmission.category_scores)
+      return Object.entries(parsed).map(([category, score]) => ({ category, score: Number(score) }))
+    } catch {
+      return []
+    }
   }
 
   if (loading) {
@@ -112,15 +129,12 @@ export default function ReviewPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FF9A62] via-[#FFB38A] to-[#FFFAF3] to-[#FF8D8A]">
-      {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 nav-sticky">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF7657] to-[#FF9A62] flex items-center justify-center">
-                <span className="text-white font-bold text-sm">GM</span>
-              </div>
-              <span className="font-bold text-[#171717] text-lg">GenLayer Moderation</span>
+              <div className="brand-mark">GM</div>
+              <span className="brand-text">GenLayer Moderation</span>
             </Link>
             <div className="hidden md:flex items-center gap-8">
               <Link href="/" className="text-[#777777] hover:text-[#171717] font-medium transition text-sm">Submit</Link>
@@ -136,90 +150,102 @@ export default function ReviewPage() {
       </nav>
 
       <main className="pt-28 pb-24 px-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12 animate-fade-in-up">
-            <h1 className="text-4xl md:text-5xl font-bold text-[#171717] mb-4">
-              Review Dashboard
-            </h1>
-            <p className="text-[#777777] text-lg max-w-2xl mx-auto">
-              Review and moderate AI-generated content evaluations
-            </p>
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8 animate-fade-in-up">
+            <div>
+              <h1 className="text-4xl md:text-5xl font-bold text-[#171717] mb-3">
+                Review Dashboard
+              </h1>
+              <p className="text-[#777777] text-lg max-w-2xl">
+                Review submissions, inspect AI decisions, and submit appeals when needed.
+              </p>
+            </div>
+            <button
+              onClick={loadData}
+              className="btn-secondary w-fit"
+            >
+              Refresh
+            </button>
           </div>
 
-          {/* Stats Overview */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8 animate-fade-in-up animate-delay-100">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8 animate-fade-in-up animate-delay-100">
             {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'NEEDS_REVIEW'] as StatusFilter[]).map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
-                className={`glass-card p-4 text-center transition-all duration-300 ${
-                  statusFilter === status ? 'ring-2 ring-[#FF9A62] bg-white/90' : 'hover:bg-white/80'
+                className={`rounded-2xl p-4 text-left transition-all duration-300 border ${
+                  statusFilter === status
+                    ? 'bg-[#171717] text-white border-[#171717] shadow-lg shadow-[rgba(23,23,23,0.12)]'
+                    : 'glass-card hover:bg-white/80'
                 }`}
               >
-                <p className="text-2xl font-bold text-[#171717]">{statusCounts[status]}</p>
-                <p className="text-xs text-[#777777] mt-1 capitalize">{status.replace('_', ' ')}</p>
+                <p className={`text-2xl font-bold ${statusFilter === status ? 'text-white' : 'text-[#171717]'}`}>{statusCounts[status]}</p>
+                <p className={`text-xs mt-1 ${statusFilter === status ? 'text-white/70' : 'text-[#777777]'}`}>{statusLabels[status]}</p>
               </button>
             ))}
           </div>
 
-          {/* Submissions List */}
-          <div className="glass-card p-6 animate-fade-in-up animate-delay-200">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-[#171717]">
-                Submissions {statusFilter !== 'ALL' && `• ${statusFilter}`}
-              </h2>
-              <button
-                onClick={loadData}
-                className="text-sm text-[#777777] hover:text-[#171717] font-medium transition"
-              >
-                Refresh
-              </button>
+          <div className="glass-card p-0 overflow-hidden animate-fade-in-up animate-delay-200">
+            <div className="p-5 border-b border-[rgba(20,20,20,0.08)] flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-[#171717]">Submissions</h2>
+                <p className="text-sm text-[#777777] mt-1">
+                  {statusFilter === 'ALL' ? 'Showing all submissions' : `${statusLabels[statusFilter]} submissions`}
+                </p>
+              </div>
+              <span className="badge badge-pending">{filteredSubmissions.length} visible</span>
             </div>
 
             {filteredSubmissions.length === 0 ? (
-              <div className="text-center py-12">
+              <div className="text-center py-14">
                 <p className="text-[#777777]">No submissions found</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="divide-y divide-[rgba(20,20,20,0.06)]">
+                <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-white/35 text-xs font-semibold uppercase tracking-wide text-[#777777]">
+                  <div className="col-span-1">ID</div>
+                  <div className="col-span-2">Status</div>
+                  <div className="col-span-1">Score</div>
+                  <div className="col-span-3">Date</div>
+                  <div className="col-span-4">Content</div>
+                  <div className="col-span-1"></div>
+                </div>
+
                 {filteredSubmissions.map((submission, index) => (
                   <div
                     key={submission.id}
-                    className="bg-white/50 rounded-xl p-4 border border-[rgba(20,20,20,0.06)] hover:bg-white/70 transition-all duration-300 animate-fade-in-up"
-                    style={{ animationDelay: `${200 + index * 50}ms` }}
+                    className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center px-6 py-4 hover:bg-white/55 transition-all duration-300 animate-fade-in-up"
+                    style={{ animationDelay: `${200 + index * 35}ms` }}
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xs text-[#777777] font-mono">
-                            #{submission.id.toString()}
-                          </span>
-                          <span className={getStatusBadgeClass(submission.status)}>
-                            {submission.status}
-                          </span>
-                          {submission.score !== undefined && (
-                            <span className={`text-xs font-bold ${
-                              submission.score >= 60 ? 'text-[#c94a3f]' :
-                              submission.score < 50 ? 'text-[#4a7c31]' :
-                              'text-[#c85a38]'
-                            }`}>
-                              Score: {submission.score}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[#171717] font-medium mb-1 line-clamp-2">
-                          {truncateContent(submission.content, 120)}
-                        </p>
-                        <p className="text-xs text-[#777777]">
-                          {formatDate(submission.timestamp)}
-                        </p>
-                      </div>
+                    <div className="col-span-1">
+                      <span className="text-xs font-mono text-[#777777]">#{submission.id.toString()}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className={getStatusBadgeClass(submission.status)}>
+                        {submission.status}
+                      </span>
+                    </div>
+                    <div className="col-span-1">
+                      <span className={`text-sm font-bold ${
+                        Number(submission.score) >= 60 ? 'text-[#c94a3f]' :
+                        Number(submission.score) < 50 ? 'text-[#4a7c31]' :
+                        'text-[#c85a38]'
+                      }`}>
+                        {Number(submission.score)}
+                      </span>
+                    </div>
+                    <div className="col-span-3">
+                      <p className="text-sm text-[#777777]">{formatDate(submission.timestamp)}</p>
+                    </div>
+                    <div className="col-span-4 md:col-span-4">
+                      <p className="text-sm text-[#171717] line-clamp-2">{truncateContent(submission.content, 96)}</p>
+                    </div>
+                    <div className="col-span-1 md:col-span-1 flex md:justify-end">
                       <button
                         onClick={() => handleViewDetails(submission)}
-                        className="btn-secondary text-xs px-4 py-2 shrink-0"
+                        className="btn-secondary text-xs px-4 py-2"
                       >
-                        View Details
+                        View
                       </button>
                     </div>
                   </div>
@@ -230,7 +256,6 @@ export default function ReviewPage() {
         </div>
       </main>
 
-      {/* Detail Modal */}
       {selectedSubmission && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
@@ -240,125 +265,109 @@ export default function ReviewPage() {
               setAppealResult(null)
             }}
           />
-          <div className="relative bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl animate-fade-in-up">
+          <div className="relative bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl animate-fade-in-up">
             <div className="p-6 overflow-y-auto max-h-[90vh]">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-start justify-between gap-4 mb-6">
                 <div>
-                  <h2 className="text-xl font-bold text-[#171717]">
+                  <h2 className="text-2xl font-bold text-[#171717]">
                     Submission #{selectedSubmission.id.toString()}
                   </h2>
-                  <p className="text-sm text-[#777777]">{formatDate(selectedSubmission.timestamp)}</p>
+                  <p className="text-sm text-[#777777] mt-1">{formatDate(selectedSubmission.timestamp)}</p>
                 </div>
                 <span className={getStatusBadgeClass(selectedSubmission.status)}>
                   {selectedSubmission.status}
                 </span>
               </div>
 
-              <div className="space-y-6">
-                {/* Content */}
-                <div>
-                  <h3 className="text-sm font-semibold text-[#777777] mb-2">Content</h3>
-                  <div className="bg-[rgba(20,20,20,0.03)] rounded-xl p-4 border border-[rgba(20,20,20,0.08)]">
-                    <p className="text-[#171717] whitespace-pre-wrap">{selectedSubmission.content}</p>
-                  </div>
-                </div>
-
-                {/* Evaluation Result */}
-                {(selectedSubmission.score !== undefined || selectedSubmission.reason) && (
+              <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-6">
+                <div className="space-y-6">
                   <div>
-                    <h3 className="text-sm font-semibold text-[#777777] mb-2">AI Evaluation</h3>
-                    <div className="bg-[rgba(20,20,20,0.03)] rounded-xl p-4 border border-[rgba(20,20,20,0.08)]">
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <p className="text-xs text-[#777777]">Overall Score</p>
-                          <p className={`text-2xl font-bold ${
-                            Number(selectedSubmission.score) >= 60 ? 'text-[#c94a3f]' :
-                            Number(selectedSubmission.score) < 50 ? 'text-[#4a7c31]' :
-                            'text-[#c85a38]'
-                          }`}>
-                            {Number(selectedSubmission.score)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-[#777777]">Verdict</p>
-                          <p className={`text-lg font-bold capitalize ${
-                            selectedSubmission.status === 'APPROVED' ? 'text-[#4a7c31]' :
-                            selectedSubmission.status === 'REJECTED' ? 'text-[#c94a3f]' :
-                            'text-[#c85a38]'
-                          }`}>
-                            {selectedSubmission.status}
-                          </p>
-                        </div>
-                      </div>
-                      {selectedSubmission.category_scores && (
-                        <div className="mb-4">
-                          <p className="text-xs text-[#777777] mb-2">Category Scores</p>
-                          <div className="flex flex-wrap gap-2">
-                            {(() => {
-                              try {
-                                const parsed = JSON.parse(selectedSubmission.category_scores)
-                                return Object.entries(parsed).map(([category, score]) => (
-                                  <span
-                                    key={category}
-                                    className="px-2 py-1 bg-white/60 rounded-lg text-xs font-medium text-[#171717]"
-                                  >
-                                    {category}: {score as number}
-                                  </span>
-                                ))
-                              } catch {
-                                return <span className="text-sm text-[#777777]">{selectedSubmission.category_scores}</span>
-                              }
-                            })()}
-                          </div>
-                        </div>
-                      )}
-                      {selectedSubmission.reason && (
-                        <div>
-                          <p className="text-xs text-[#777777] mb-1">Reason</p>
-                          <p className="text-sm text-[#171717]">{selectedSubmission.reason}</p>
-                        </div>
-                      )}
+                    <h3 className="text-sm font-semibold text-[#777777] mb-2">Content</h3>
+                    <div className="rounded-2xl bg-[rgba(20,20,20,0.03)] p-5 border border-[rgba(20,20,20,0.08)]">
+                      <p className="text-[#171717] whitespace-pre-wrap leading-relaxed">{selectedSubmission.content}</p>
                     </div>
                   </div>
-                )}
 
-                {/* Appeal Section */}
-                {selectedSubmission.status !== 'PENDING' && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-[#777777] mb-2">Submit Appeal</h3>
-                    <textarea
-                      value={appealReason}
-                      onChange={(e) => setAppealReason(e.target.value)}
-                      placeholder="Explain why you believe this evaluation should be reconsidered..."
-                      className="textarea-field w-full h-32 text-sm"
-                      maxLength={1000}
-                    />
-                    <p className="text-xs text-[#777777] mt-1 text-right">
-                      {appealReason.length}/1000
-                    </p>
-                    {appealResult && (
-                      <p className={`text-sm mt-2 ${appealResult.includes('Failed') ? 'text-[#c94a3f]' : 'text-[#4a7c31]'}`}>
-                        {appealResult}
-                      </p>
+                  {selectedSubmission.status === 'PENDING' && (
+                    <div className="rounded-2xl bg-white/50 border border-[rgba(20,20,20,0.08)] p-5 text-center text-[#777777]">
+                      This submission is still pending evaluation.
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-6">
+                  <div className="rounded-2xl bg-[rgba(20,20,20,0.03)] p-5 border border-[rgba(20,20,20,0.08)]">
+                    <h3 className="text-sm font-semibold text-[#777777] mb-4">AI Evaluation</h3>
+                    <div className="grid grid-cols-2 gap-4 mb-5">
+                      <div className="rounded-xl bg-white/60 p-4">
+                        <p className="text-xs text-[#777777] mb-1">Score</p>
+                        <p className={`text-3xl font-bold ${
+                          Number(selectedSubmission.score) >= 60 ? 'text-[#c94a3f]' :
+                          Number(selectedSubmission.score) < 50 ? 'text-[#4a7c31]' :
+                          'text-[#c85a38]'
+                        }`}>
+                          {Number(selectedSubmission.score)}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-white/60 p-4">
+                        <p className="text-xs text-[#777777] mb-1">Verdict</p>
+                        <p className="text-lg font-bold text-[#171717] leading-tight">{selectedSubmission.status}</p>
+                      </div>
+                    </div>
+
+                    {selectedSubmission.reason && (
+                      <div className="mb-5">
+                        <p className="text-xs text-[#777777] mb-1">Reason</p>
+                        <p className="text-sm text-[#171717] leading-relaxed">{selectedSubmission.reason}</p>
+                      </div>
                     )}
-                    <button
-                      onClick={handleAppeal}
-                      disabled={appealing || !appealReason.trim()}
-                      className="btn-primary w-full mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {appealing ? 'Submitting...' : 'Submit Appeal'}
-                    </button>
-                  </div>
-                )}
 
-                {selectedSubmission.status === 'PENDING' && (
-                  <div className="text-center py-4 text-[#777777]">
-                    <p>This submission is still pending evaluation.</p>
+                    {parseCategoryScores().length > 0 && (
+                      <div>
+                        <p className="text-xs text-[#777777] mb-2">Category Scores</p>
+                        <div className="space-y-2">
+                          {parseCategoryScores().map(({ category, score }) => (
+                            <div key={category} className="flex items-center justify-between gap-3">
+                              <span className="text-sm text-[#171717]">{category}</span>
+                              <span className="text-sm font-semibold text-[#777777]">{score}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
+
+                  {selectedSubmission.status !== 'PENDING' && (
+                    <div className="rounded-2xl bg-[rgba(20,20,20,0.03)] p-5 border border-[rgba(20,20,20,0.08)]">
+                      <h3 className="text-sm font-semibold text-[#777777] mb-3">Submit Appeal</h3>
+                      <textarea
+                        value={appealReason}
+                        onChange={(e) => setAppealReason(e.target.value)}
+                        placeholder="Explain why this evaluation should be reconsidered..."
+                        className="textarea-field w-full h-28 text-sm"
+                        maxLength={1000}
+                      />
+                      <p className="text-xs text-[#777777] mt-2 text-right">
+                        {appealReason.length}/1000
+                      </p>
+                      {appealResult && (
+                        <p className={`text-sm mt-3 ${appealResult.includes('Failed') ? 'text-[#c94a3f]' : 'text-[#4a7c31]'}`}>
+                          {appealResult}
+                        </p>
+                      )}
+                      <button
+                        onClick={handleAppeal}
+                        disabled={appealing || !appealReason.trim()}
+                        className="btn-primary w-full mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {appealing ? 'Submitting...' : 'Submit Appeal'}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-[rgba(20,20,20,0.08)] flex justify-end">
+            <div className="px-6 py-4 border-t border-[rgba(20,20,20,0.08)] flex justify-end bg-white/80">
               <button
                 onClick={() => {
                   setSelectedSubmission(null)
