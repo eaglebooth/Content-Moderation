@@ -35,146 +35,187 @@ export default function ResultsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen bg-gradient-to-br from-[#FF9A62] via-[#FFB38A] to-[#FFFAF3] to-[#FF8D8A] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#171717] mx-auto mb-4"></div>
+          <p className="text-[#777777]">Loading statistics...</p>
+        </div>
       </div>
     )
   }
 
+  const total = Number(stats?.total_submissions || 0n)
+  const approved = Number(stats?.approved || 0n)
+  const rejected = Number(stats?.rejected || 0n)
+  const pending = Number(stats?.pending || 0n)
+  const needsReview = Number(stats?.needs_review || 0n)
+  const approvalRate = total > 0 ? (approved / total) * 100 : 0
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-[#FF9A62] via-[#FFB38A] to-[#FFFAF3] to-[#FF8D8A]">
       {/* Navigation */}
-      <nav className="border-b border-gray-700 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-              GenLayer Moderation
+      <nav className="fixed top-0 left-0 right-0 z-50 nav-sticky">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF7657] to-[#FF9A62] flex items-center justify-center">
+                <span className="text-white font-bold text-sm">GM</span>
+              </div>
+              <span className="font-bold text-[#171717] text-lg">GenLayer Moderation</span>
             </Link>
-            <div className="flex gap-6">
-              <Link href="/" className="text-gray-300 hover:text-white transition">
-                Submit
-              </Link>
-              <Link href="/review" className="text-gray-300 hover:text-white transition">
-                Review
-              </Link>
-              <Link href="/results" className="text-white font-semibold">
-                Statistics
-              </Link>
+            <div className="hidden md:flex items-center gap-8">
+              <Link href="/" className="text-[#777777] hover:text-[#171717] font-medium transition text-sm">Submit</Link>
+              <Link href="/review" className="text-[#777777] hover:text-[#171717] font-medium transition text-sm">Review</Link>
+              <Link href="/results" className="text-[#171717] font-semibold text-sm">Statistics</Link>
+              <a href="https://genlayer.com" target="_blank" rel="noopener noreferrer" className="text-[#777777] hover:text-[#171717] font-medium transition text-sm">Docs</a>
             </div>
+            <Link href="/" className="btn-primary text-sm">
+              Get Started
+            </Link>
           </div>
         </div>
       </nav>
 
-      <main className="container mx-auto px-4 py-16">
-        <div className="text-center mb-16">
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-            Moderation Statistics
-          </h1>
-          <p className="text-gray-400">
-            Real-time overview of AI-powered content moderation
-          </p>
-        </div>
+      <main className="pt-28 pb-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-16 animate-fade-in-up">
+            <h1 className="text-4xl md:text-5xl font-bold text-[#171717] mb-4">
+              Moderation Statistics
+            </h1>
+            <p className="text-[#777777] text-lg max-w-2xl mx-auto">
+              Real-time overview of AI-powered content moderation
+            </p>
+          </div>
 
-        <div className="max-w-6xl mx-auto">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-              <h3 className="text-gray-400 text-sm font-medium mb-2">Total Submissions</h3>
-              <p className="text-4xl font-bold text-white">{stats ? Number(stats.total_submissions) : 0}</p>
+            <div className="glass-card p-6 animate-fade-in-up animate-delay-100">
+              <h3 className="text-[#777777] text-sm font-medium mb-2">Total Submissions</h3>
+              <p className="text-4xl font-bold text-[#171717]">{total}</p>
             </div>
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-              <h3 className="text-gray-400 text-sm font-medium mb-2">Approved</h3>
-              <p className="text-4xl font-bold text-green-400">{stats ? Number(stats.approved) : 0}</p>
-              <p className="text-sm text-gray-500 mt-1">
-                {stats && stats.total_submissions > 0n
-                  ? `${((Number(stats.approved) / Number(stats.total_submissions)) * 100).toFixed(1)}%`
-                  : '0%'}
+            <div className="glass-card p-6 animate-fade-in-up animate-delay-200">
+              <h3 className="text-[#777777] text-sm font-medium mb-2">Approved</h3>
+              <p className="text-4xl font-bold text-[#4a7c31]">{approved}</p>
+              <p className="text-sm text-[#777777] mt-2">
+                {total > 0 ? `${approvalRate.toFixed(1)}%` : '0%'} of total
               </p>
             </div>
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-              <h3 className="text-gray-400 text-sm font-medium mb-2">Rejected</h3>
-              <p className="text-4xl font-bold text-red-400">{stats ? Number(stats.rejected) : 0}</p>
+            <div className="glass-card p-6 animate-fade-in-up animate-delay-300">
+              <h3 className="text-[#777777] text-sm font-medium mb-2">Rejected</h3>
+              <p className="text-4xl font-bold text-[#c94a3f]">{rejected}</p>
             </div>
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-              <h3 className="text-gray-400 text-sm font-medium mb-2">Needs Review</h3>
-              <p className="text-4xl font-bold text-yellow-400">{stats ? Number(stats.needs_review) : 0}</p>
+            <div className="glass-card p-6 animate-fade-in-up animate-delay-400">
+              <h3 className="text-[#777777] text-sm font-medium mb-2">Needs Review</h3>
+              <p className="text-4xl font-bold text-[#c85a38]">{needsReview}</p>
             </div>
           </div>
 
           {/* Approval Rate */}
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 border border-gray-700 mb-12">
-            <h3 className="text-xl font-semibold mb-4">Approval Rate</h3>
-            <div className="relative pt-1">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-blue-400">
-                  {stats ? (Number(stats.approval_rate) / 100).toFixed(1) + '%' : '0%'}
-                </span>
-                <span className="text-sm font-medium text-gray-400">
-                  {stats ? `${Number(stats.approved)} / ${Number(stats.total_submissions)}` : '0 / 0'} submissions
-                </span>
+          <div className="glass-card p-8 mb-12 animate-fade-in-up animate-delay-200">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-xl font-semibold text-[#171717]">Approval Rate</h3>
+                <p className="text-sm text-[#777777] mt-1">Based on evaluated submissions</p>
               </div>
-              <div className="overflow-hidden h-4 mb-4 text-xs flex rounded-full bg-gray-700">
-                <div
-                  style={{ width: `${stats ? Number(stats.approval_rate) / 100 : 0}%` }}
-                  className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-green-500 to-green-400 transition-all duration-500"
-                ></div>
+              <div className="text-3xl font-bold text-[#171717]">
+                {approvalRate.toFixed(1)}%
               </div>
             </div>
-            <p className="text-sm text-gray-400">
-              Approval rate is calculated as (Approved submissions) / (Total evaluated submissions)
+            <div className="relative h-4 bg-[rgba(20,20,20,0.06)] rounded-full overflow-hidden">
+              <div
+                className="absolute left-0 top-0 h-full bg-gradient-to-r from-[#9ADF72] to-[#4a7c31] rounded-full transition-all duration-1000"
+                style={{ width: `${approvalRate}%` }}
+              ></div>
+            </div>
+            <p className="text-sm text-[#777777] mt-4">
+              {approved} approved out of {total} total submissions
             </p>
           </div>
 
           {/* Community Guidelines */}
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 border border-gray-700 mb-12">
-            <h3 className="text-xl font-semibold mb-6">Community Guidelines</h3>
-            <div className="prose prose-invert max-w-none">
+          <div className="glass-card p-8 mb-12 animate-fade-in-up animate-delay-300">
+            <h3 className="text-xl font-semibold text-[#171717] mb-6">Community Guidelines</h3>
+            <div className="grid md:grid-cols-2 gap-6">
               {(() => {
                 try {
                   const parsed = JSON.parse(guidelines)
                   return (
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-gray-900/50 p-4 rounded-lg">
-                          <h4 className="font-semibold text-red-400 mb-2">Hate Speech</h4>
-                          <p className="text-sm text-gray-400">{parsed.hate_speech}</p>
-                          <p className="text-sm text-gray-500 mt-1">Weight: 30%</p>
+                    <>
+                      <div className="bg-white/50 rounded-xl p-5 border border-[rgba(20,20,20,0.06)]">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-8 h-8 rounded-lg bg-[rgba(255,125,115,0.2)] flex items-center justify-center">
+                            <span className="text-lg">🔥</span>
+                          </div>
+                          <h4 className="font-semibold text-[#171717]">Hate Speech</h4>
                         </div>
-                        <div className="bg-gray-900/50 p-4 rounded-lg">
-                          <h4 className="font-semibold text-red-400 mb-2">Misinformation</h4>
-                          <p className="text-sm text-gray-400">{parsed.misinformation}</p>
-                          <p className="text-sm text-gray-500 mt-1">Weight: 25%</p>
-                        </div>
-                        <div className="bg-gray-900/50 p-4 rounded-lg">
-                          <h4 className="font-semibold text-red-400 mb-2">Explicit Content</h4>
-                          <p className="text-sm text-gray-400">{parsed.explicit_content}</p>
-                          <p className="text-sm text-gray-500 mt-1">Weight: 20%</p>
-                        </div>
-                        <div className="bg-gray-900/50 p-4 rounded-lg">
-                          <h4 className="font-semibold text-red-400 mb-2">Harassment</h4>
-                          <p className="text-sm text-gray-400">{parsed.harassment}</p>
-                          <p className="text-sm text-gray-500 mt-1">Weight: 15%</p>
-                        </div>
-                        <div className="bg-gray-900/50 p-4 rounded-lg">
-                          <h4 className="font-semibold text-red-400 mb-2">Spam</h4>
-                          <p className="text-sm text-gray-400">{parsed.spam}</p>
-                          <p className="text-sm text-gray-500 mt-1">Weight: 10%</p>
-                        </div>
+                        <p className="text-sm text-[#777777] leading-relaxed">{parsed.hate_speech}</p>
+                        <p className="text-xs text-[#777777] mt-2 opacity-60">Weight: 30%</p>
                       </div>
-                      <div className="border-t border-gray-700 pt-4">
-                        <h4 className="font-semibold mb-2">Decision Thresholds</h4>
-                        <ul className="space-y-1 text-sm text-gray-400">
-                          <li>• <strong>APPROVED:</strong> Total score &lt; 50 AND no category &gt; 40</li>
-                          <li>• <strong>REJECTED:</strong> Total score ≥ 60 OR any category ≥ 50</li>
-                          <li>• <strong>NEEDS_REVIEW:</strong> Total score 50-59 AND all categories &lt; 40</li>
-                        </ul>
+                      <div className="bg-white/50 rounded-xl p-5 border border-[rgba(20,20,20,0.06)]">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-8 h-8 rounded-lg bg-[rgba(255,154,98,0.2)] flex items-center justify-center">
+                            <span className="text-lg">⚠️</span>
+                          </div>
+                          <h4 className="font-semibold text-[#171717]">Misinformation</h4>
+                        </div>
+                        <p className="text-sm text-[#777777] leading-relaxed">{parsed.misinformation}</p>
+                        <p className="text-xs text-[#777777] mt-2 opacity-60">Weight: 25%</p>
                       </div>
-                    </div>
+                      <div className="bg-white/50 rounded-xl p-5 border border-[rgba(20,20,20,0.06)]">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-8 h-8 rounded-lg bg-[rgba(255,141,138,0.2)] flex items-center justify-center">
+                            <span className="text-lg">🔞</span>
+                          </div>
+                          <h4 className="font-semibold text-[#171717]">Explicit Content</h4>
+                        </div>
+                        <p className="text-sm text-[#777777] leading-relaxed">{parsed.explicit_content}</p>
+                        <p className="text-xs text-[#777777] mt-2 opacity-60">Weight: 20%</p>
+                      </div>
+                      <div className="bg-white/50 rounded-xl p-5 border border-[rgba(20,20,20,0.06)]">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-8 h-8 rounded-lg bg-[rgba(255,154,98,0.2)] flex items-center justify-center">
+                            <span className="text-lg">💬</span>
+                          </div>
+                          <h4 className="font-semibold text-[#171717]">Harassment</h4>
+                        </div>
+                        <p className="text-sm text-[#777777] leading-relaxed">{parsed.harassment}</p>
+                        <p className="text-xs text-[#777777] mt-2 opacity-60">Weight: 15%</p>
+                      </div>
+                      <div className="bg-white/50 rounded-xl p-5 border border-[rgba(20,20,20,0.06)] md:col-span-2">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-8 h-8 rounded-lg bg-[rgba(154,223,114,0.2)] flex items-center justify-center">
+                            <span className="text-lg">📢</span>
+                          </div>
+                          <h4 className="font-semibold text-[#171717]">Spam</h4>
+                        </div>
+                        <p className="text-sm text-[#777777] leading-relaxed">{parsed.spam}</p>
+                        <p className="text-xs text-[#777777] mt-2 opacity-60">Weight: 10%</p>
+                      </div>
+                    </>
                   )
                 } catch {
-                  return <pre className="text-sm text-gray-300 overflow-x-auto">{guidelines}</pre>
+                  return <pre className="text-sm text-[#171717] overflow-x-auto whitespace-pre-wrap">{guidelines}</pre>
                 }
               })()}
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-[rgba(20,20,20,0.08)]">
+              <h4 className="font-semibold text-[#171717] mb-3">Decision Thresholds</h4>
+              <ul className="space-y-2 text-sm text-[#777777]">
+                <li className="flex items-start gap-2">
+                  <span className="text-[#9ADF72] font-bold">●</span>
+                  <span><strong>APPROVED:</strong> Total score &lt; 50 AND no category &gt; 40</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[#c94a3f] font-bold">●</span>
+                  <span><strong>REJECTED:</strong> Total score ≥ 60 OR any category ≥ 50</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[#c85a38] font-bold">●</span>
+                  <span><strong>NEEDS REVIEW:</strong> Total score 50-59 AND all categories &lt; 40</span>
+                </li>
+              </ul>
             </div>
           </div>
 
@@ -182,49 +223,60 @@ export default function ResultsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Link
               href="/"
-              className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-blue-500 transition group"
+              className="glass-card p-6 hover:bg-white/80 transition-all duration-300 animate-fade-in-up animate-delay-400 group"
             >
-              <h3 className="text-lg font-semibold mb-2 group-hover:text-blue-400 transition">
-                Submit Content
-              </h3>
-              <p className="text-gray-400 text-sm">
-                Submit text or image URLs for AI moderation
-              </p>
+              <div className="w-12 h-12 rounded-xl bg-[rgba(255,154,98,0.2)] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <svg className="w-6 h-6 text-[#FF7657]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-[#171717] mb-2">Submit Content</h3>
+              <p className="text-[#777777] text-sm">Submit text or image URLs for AI moderation</p>
             </Link>
             <Link
               href="/review"
-              className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-blue-500 transition group"
+              className="glass-card p-6 hover:bg-white/80 transition-all duration-300 animate-fade-in-up animate-delay-400 group"
             >
-              <h3 className="text-lg font-semibold mb-2 group-hover:text-blue-400 transition">
-                Review Submissions
-              </h3>
-              <p className="text-gray-400 text-sm">
-                View all moderation decisions and appeals
-              </p>
+              <div className="w-12 h-12 rounded-xl bg-[rgba(154,223,114,0.2)] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <svg className="w-6 h-6 text-[#4a7c31]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-[#171717] mb-2">Review Submissions</h3>
+              <p className="text-[#777777] text-sm">View all moderation decisions and appeals</p>
             </Link>
             <a
               href="https://genlayer.com/explorer"
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-blue-500 transition group"
+              className="glass-card p-6 hover:bg-white/80 transition-all duration-300 animate-fade-in-up animate-delay-400 group"
             >
-              <h3 className="text-lg font-semibold mb-2 group-hover:text-blue-400 transition">
-                View on Explorer
-              </h3>
-              <p className="text-gray-400 text-sm">
-                See contract on GenLayer Explorer
-              </p>
+              <div className="w-12 h-12 rounded-xl bg-[rgba(255,141,138,0.2)] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <svg className="w-6 h-6 text-[#c94a3f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-[#171717] mb-2">View on Explorer</h3>
+              <p className="text-[#777787] text-sm">See contract on GenLayer Explorer</p>
             </a>
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-gray-700 py-8 mt-16">
-        <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
-          <p>AI Content Moderation on GenLayer Network</p>
-          <p className="mt-1">
+      <footer className="py-12 px-6 bg-white/60 border-t border-[rgba(20,20,20,0.06)]">
+        <div className="max-w-7xl mx-auto text-center">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#FF7657] to-[#FF9A62] flex items-center justify-center">
+              <span className="text-white font-bold text-xs">GM</span>
+            </div>
+            <span className="font-semibold text-[#171717]">GenLayer Moderation</span>
+          </div>
+          <p className="text-sm text-[#777777]">
             Built with GenLayer Intelligent Contracts
+          </p>
+          <p className="text-xs text-[#777777] mt-2 opacity-60">
+            © 2025 AI Content Moderation Project
           </p>
         </div>
       </footer>

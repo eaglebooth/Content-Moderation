@@ -313,18 +313,16 @@ class GenLayerClient {
     return txHash
   }
 
-  async evaluateSubmission(submissionId: bigint | number | string): Promise<{ verdict: string; score: number; reason: string }> {
+  async evaluateSubmission(submissionId: bigint | number | string): Promise<{ verdict: string; score: number; reason: string; category_scores: Record<string, number> }> {
     const data = await this.rpcCall('evaluate', [BigInt(submissionId)])
-    // decode(string, uint256, string)
-    const result = this.decodeTuple(data, [
-      { type: 'string' }, // verdict
-      { type: 'uint256' }, // score
-      { type: 'string' }  // reason
-    ])
+    // evaluate() returns a single JSON string
+    const jsonStr = this.decodeString(data)
+    const result = JSON.parse(jsonStr)
     return {
-      verdict: result[0],
-      score: Number(result[1]),
-      reason: result[2]
+      verdict: result.verdict || result.status,
+      score: Number(result.score),
+      reason: result.reason || result.explanation || '',
+      category_scores: result.category_scores || {}
     }
   }
 
@@ -374,6 +372,37 @@ class GenLayerClient {
       ids.push(BigInt('0x' + hex.slice(64 + i * 64, 64 + (i + 1) * 64)))
     }
     return ids
+  }
+
+  async getSubmissions(): Promise<Submission[]> {
+    // Fetch submissions by each status
+    const statuses = ['PENDING', 'APPROVED', 'REJECTED', 'NEEDS_REVIEW']
+    const allIds: bigint[] = []
+
+    for (const status of statuses) {
+      try {
+        const ids = await this.getSubmissionsByStatus(status)
+        allIds.push(...ids)
+      } catch (error) {
+        console.warn(`Failed to get submissions for status ${status}:`, error)
+      }
+    }
+
+    // Remove duplicates and sort by ID (newest first)
+    const uniqueIds = [...new Set(allIds)].sort((a, b) => Number(b - a))
+
+    // Fetch details for each submission
+    const submissions: Submission[] = []
+    for (const id of uniqueIds) {
+      try {
+        const submission = await this.getSubmission(id)
+        submissions.push(submission)
+      } catch (error) {
+        console.warn(`Failed to fetch submission ${id}:`, error)
+      }
+    }
+
+    return submissions
   }
 
   async getStats(): Promise<Stats> {

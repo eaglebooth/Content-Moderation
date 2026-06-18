@@ -42,3 +42,5 @@ next-env.d.ts
 # GenLayer
 genlayer.lock
 .env.local
+
+.vercel
