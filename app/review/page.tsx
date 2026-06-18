@@ -156,14 +156,12 @@ export default function ReviewPage() {
                     }`}
                   >
                     {status === 'ALL' ? 'All Submissions' : status.replace('_', ' ')}
-                    {status !== 'ALL' && (
-                      <span className="float-right">
-                        {status === 'ALL'
-                          ? submissions.length
-                          : submissions.filter(s => s.status === status).length
-                        }
-                      </span>
-                    )}
+                    <span className="float-right">
+                      {status === 'ALL'
+                        ? submissions.length
+                        : submissions.filter(s => s.status === (status as 'PENDING' | 'APPROVED' | 'REJECTED' | 'NEEDS_REVIEW')).length
+                      }
+                    </span>
                   </button>
                 ))}
               </div>
@@ -308,11 +306,11 @@ export default function ReviewPage() {
                     {(() => {
                       try {
                         const scores = JSON.parse(selectedSubmission.category_scores)
-                        return Object.entries(scores).map(([category, score]) => (
+                        return Object.entries(scores).map(([category, scoreVal]) => (
                           <div key={category} className="flex justify-between mb-2">
                             <span className="capitalize">{category.replace('_', ' ')}</span>
-                            <span className={Number(score) > 30 ? 'text-red-400' : 'text-green-400'}>
-                              {score}
+                            <span className={Number(scoreVal as number) > 30 ? 'text-red-400' : 'text-green-400'}>
+                              {String(scoreVal)}
                             </span>
                           </div>
                         ))
