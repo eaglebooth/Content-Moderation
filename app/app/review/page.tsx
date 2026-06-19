@@ -24,6 +24,7 @@ export default function ReviewPage() {
   const [appealReason, setAppealReason] = useState('')
   const [appealing, setAppealing] = useState(false)
   const [appealResult, setAppealResult] = useState<string | null>(null)
+  const [evaluatingId, setEvaluatingId] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
@@ -75,6 +76,20 @@ export default function ReviewPage() {
     }
   }
 
+  const handleEvaluate = async (submission: Submission) => {
+    setEvaluatingId(submission.id.toString())
+    try {
+      const client = getGenLayerClient()
+      await client.initialize()
+      await client.evaluateSubmission(submission.id)
+      await loadData()
+    } catch (error) {
+      console.error('Failed to evaluate submission:', error)
+    } finally {
+      setEvaluatingId(null)
+    }
+  }
+
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'APPROVED': return 'px-3 py-1 rounded-full text-xs font-semibold bg-[#DCFCE7] text-[#16A34A]'
@@ -113,7 +128,7 @@ export default function ReviewPage() {
     return (
       <AppShell title="Review Queue" subtitle="Browse and manage moderation requests.">
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-[#0787D6] border-t-transparent"></div>
+          <div className="h-12 w-12 animate-spin rounded-full border-2 border-[#ff5b12] border-t-transparent"></div>
         </div>
       </AppShell>
     )
@@ -130,15 +145,15 @@ export default function ReviewPage() {
   return (
     <AppShell title="Review Queue" subtitle="Browse and manage moderation requests.">
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
+      <div className="mb-5 flex flex-wrap items-center gap-2 rounded-[26px] bg-white p-2 shadow-sm">
         {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'NEEDS_REVIEW'] as StatusFilter[]).map((status) => (
           <button
             key={status}
             onClick={() => setStatusFilter(status)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
               statusFilter === status
-                ? 'bg-[#111827] text-white'
-                : 'bg-white border border-[#E7EEF3] text-[#64748B] hover:border-[#0787D6]'
+                ? 'bg-[#101114] text-white'
+                : 'text-[#667085] hover:bg-[#f6f7f8] hover:text-[#101114]'
             }`}
           >
             {statusLabels[status]} ({statusCounts[status]})
@@ -146,14 +161,14 @@ export default function ReviewPage() {
         ))}
         <button
           onClick={loadData}
-          className="ml-auto px-4 py-2 bg-white border border-[#E7EEF3] text-[#64748B] rounded-xl text-sm font-medium hover:border-[#0787D6] transition-all duration-200"
+          className="ml-auto rounded-full border border-[#e7eaee] bg-white px-4 py-2 text-sm font-semibold text-[#667085] transition-all duration-200 hover:border-[#20a7ee] hover:text-[#101114]"
         >
           Refresh
         </button>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-[18px] border border-[#E7EEF3] overflow-hidden">
+      <div className="assist-card overflow-hidden rounded-[26px]">
         {filteredSubmissions.length === 0 ? (
           <div className="text-center py-16 text-[#64748B]">
             <p>No submissions found</p>
@@ -198,12 +213,23 @@ export default function ReviewPage() {
                       <span className="text-sm text-[#64748B]">{formatDate(submission.timestamp)}</span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Link
-                        href={`/app/request/${submission.id.toString()}`}
-                        className="text-sm font-medium text-[#0787D6] hover:text-[#006DB4] transition-colors"
-                      >
-                        View
-                      </Link>
+                      <div className="flex justify-end gap-2">
+                        {submission.status === 'PENDING' && (
+                          <button
+                            onClick={() => handleEvaluate(submission)}
+                            disabled={evaluatingId === submission.id.toString()}
+                            className="rounded-full border border-[#e7eaee] px-4 py-2 text-sm font-bold text-[#101114] transition-colors hover:border-[#ff5b12] disabled:opacity-50"
+                          >
+                            {evaluatingId === submission.id.toString() ? 'Evaluating' : 'Evaluate'}
+                          </button>
+                        )}
+                        <Link
+                          href={`/app/request/${submission.id.toString()}`}
+                          className="rounded-full bg-[#101114] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[#ff5b12]"
+                        >
+                          View
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -223,7 +249,7 @@ export default function ReviewPage() {
               setAppealResult(null)
             }}
           />
-          <div className="relative bg-white rounded-[22px] max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+          <div className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-[28px] bg-white shadow-2xl">
             <div className="p-8 overflow-y-auto max-h-[90vh]">
               <div className="flex items-start justify-between gap-4 mb-8">
                 <div>
@@ -302,7 +328,7 @@ export default function ReviewPage() {
                         value={appealReason}
                         onChange={(e) => setAppealReason(e.target.value)}
                         placeholder="Explain why this evaluation should be reconsidered..."
-                        className="w-full h-28 px-4 py-3 bg-white border border-[#E7EEF3] rounded-xl text-sm text-[#111827] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0787D6] focus:border-transparent transition-all resize-none"
+                        className="assist-input h-28 w-full resize-none rounded-[20px] px-4 py-3 text-sm placeholder-[#98A2B3]"
                         maxLength={1000}
                       />
                       <p className="text-xs text-[#64748B] mt-2 text-right">
@@ -316,7 +342,7 @@ export default function ReviewPage() {
                       <button
                         onClick={handleAppeal}
                         disabled={appealing || !appealReason.trim()}
-                        className="w-full h-[52px] mt-4 bg-[#0787D6] hover:bg-[#006DB4] disabled:opacity-50 text-white rounded-xl font-medium transition-all duration-200"
+                        className="assist-btn-primary mt-4 h-[52px] w-full rounded-full font-bold transition-all duration-200 disabled:opacity-50"
                       >
                         {appealing ? 'Submitting...' : 'Submit Appeal'}
                       </button>

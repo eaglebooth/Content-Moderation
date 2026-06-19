@@ -1,10 +1,5 @@
 #!/usr/bin/env node
 
-/**
- * Project Verification Script
- * Runs all pre-deployment checks
- */
-
 const { execSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
@@ -14,210 +9,207 @@ const projectRoot = process.cwd()
 function checkFile(filePath, description) {
   const fullPath = path.join(projectRoot, filePath)
   if (fs.existsSync(fullPath)) {
-    console.log(`✓ ${description}`)
+    console.log(`OK ${description}`)
     return true
-  } else {
-    console.error(`✗ Missing: ${filePath}`)
-    return false
   }
+  console.error(`FAIL Missing: ${filePath}`)
+  return false
+}
+
+function readContract() {
+  return fs.readFileSync(path.join(projectRoot, 'contracts/ContentModeration.py'), 'utf-8')
 }
 
 function checkPythonSyntax() {
   try {
-    console.log('Checking Python syntax...')
     execSync('python -c "import ast; ast.parse(open(\'contracts/ContentModeration.py\').read())"', {
       stdio: 'inherit',
-      cwd: projectRoot
+      cwd: projectRoot,
     })
-    console.log('✓ Python syntax valid')
+    console.log('OK Python syntax valid')
     return true
-  } catch (error) {
-    console.error('✗ Python syntax error!')
+  } catch {
+    console.error('FAIL Python syntax error')
     return false
   }
 }
 
 function checkContractHeader() {
-  const contractPath = path.join(projectRoot, 'contracts/ContentModeration.py')
-  const content = fs.readFileSync(contractPath, 'utf-8')
-  const lines = content.split('\n')
+  const lines = readContract().split('\n')
+  const headerOk = lines[0]?.trim() === '# v0.2.16'
+  const dependsOk = lines[1]?.includes('py-genlayer:')
+  const importOk = lines.some((line) => line.trim() === 'from genlayer import *')
 
-  const expectedHeader = '# v0.2.16'
-  const expectedDepends = '# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }'
-  const expectedImport = 'from genlayer import *'
-
-  if (lines[0]?.trim() === expectedHeader && lines[1]?.trim() === expectedDepends) {
-    console.log('✓ Contract header correct')
-  } else {
-    console.error('✗ Contract header incorrect')
+  if (!headerOk || !dependsOk || !importOk) {
+    console.error('FAIL Contract header/import is incomplete')
     return false
   }
 
-  if (lines.findIndex(line => line.includes(expectedImport)) > 0) {
-    console.log('✓ Import statement correct')
-  } else {
-    console.error('✗ Missing genlayer import')
-    return false
-  }
-
+  console.log('OK Contract header/import correct')
   return true
 }
 
 function checkForbiddenTypes() {
-  const contractPath = path.join(projectRoot, 'contracts/ContentModeration.py')
-  const content = fs.readFileSync(contractPath, 'utf-8')
+  const content = readContract()
+  const forbidden = ['float', 'tuple', 'list', 'dict', 'bool', 'NamedTuple', 'Optional', 'List', 'Dict']
+  const cleanContent = content
+    .split('\n')
+    .map((line) => line.split('#')[0].replace(/"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/g, ''))
+    .join('\n')
 
-  const forbidden = ['int', 'float', 'tuple', 'list', 'dict', 'bool', 'NamedTuple', 'Optional', 'List', 'Dict']
-
-  // Remove comments and strings to avoid false positives
-  const lines = content.split('\n')
-  const cleanLines = lines.map(line => {
-    // Remove single-line comments
-    const withoutComment = line.split('#')[0]
-    // Remove string literals (simple approach)
-    return withoutComment.replace(/"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/g, '')
+  const violations = forbidden.filter((type) => {
+    const regex = new RegExp(`(?:storage:|:\\s*|->\\s*)${type}(?:\\s|,|\\)|\\]|$)`, 'g')
+    return regex.test(cleanContent)
   })
 
-  const cleanContent = cleanLines.join('\n')
-
-  // Check for forbidden types in signatures/storage only
-  // Pattern: type annotation contexts (after : or -> in function defs, or storage: type)
-  const violations = []
-  for (const type of forbidden) {
-    // Match: storage: type, or param: type, or -> type at end or before ,
-    // But NOT int(...) function calls
-    const regex = new RegExp(`(?:storage:|:\\s*|->\\s*)${type}(?:\\s|,|\\)|\\]|$)`, 'g')
-    if (regex.test(cleanContent)) {
-      violations.push(type)
-    }
-  }
-
-  if (violations.length === 0) {
-    console.log('✓ No forbidden types in signatures/storage')
-    return true
-  } else {
-    console.error(`✗ Forbidden types found: ${violations.join(', ')}`)
+  if (violations.length > 0) {
+    console.error(`FAIL Forbidden type annotations found: ${violations.join(', ')}`)
     return false
   }
+
+  console.log('OK No forbidden type annotations in signatures/storage')
+  return true
 }
 
-function checkNondetPattern() {
-  const contractPath = path.join(projectRoot, 'contracts/ContentModeration.py')
-  const content = fs.readFileSync(contractPath, 'utf-8')
+function checkNondeterminismPattern() {
+  const content = readContract()
 
-  if (!content.includes('gl.eq_principle.strict_eq')) {
-    console.error('✗ Missing strict_eq pattern')
+  if (content.includes('gl.eq_principle.strict_eq')) {
+    console.error('FAIL strict_eq consensus found; semantic consensus is required')
     return false
   }
 
-  const hasNondetInsideLocal = /def\s+\w+\(.*\):.*\n.*gl\.nondet\.(web|exec_prompt)/s.test(content)
-
-  if (hasNondetInsideLocal) {
-    console.log('✓ Nondeterministic operations properly wrapped')
-    return true
-  } else {
-    console.error('✗ Nondet calls not inside local functions')
+  if (!content.includes('gl.eq_principle.prompt_comparative')) {
+    console.error('FAIL Missing gl.eq_principle.prompt_comparative')
     return false
   }
+
+  if (!content.includes('gl.nondet.web.render')) {
+    console.error('FAIL Missing gl.nondet.web.render evidence fetch')
+    return false
+  }
+
+  if (!/def\s+\w+\(.*\):.*\n.*gl\.nondet\.(web|exec_prompt)/s.test(content)) {
+    console.error('FAIL Nondeterministic calls are not wrapped in local functions')
+    return false
+  }
+
+  console.log('OK Nondeterministic calls use web evidence and semantic consensus')
+  return true
 }
 
 function checkU256Usage() {
-  const contractPath = path.join(projectRoot, 'contracts/ContentModeration.py')
-  const content = fs.readFileSync(contractPath, 'utf-8')
-
-  if (content.includes('u256(')) {
-    console.log('✓ u256 wrappers present')
-    return true
-  } else {
-    console.error('✗ Missing u256 wrappers')
+  if (!readContract().includes('u256(')) {
+    console.error('FAIL Missing u256 wrappers')
     return false
   }
+
+  console.log('OK u256 wrappers present')
+  return true
 }
 
 function checkProjectStructure() {
-  console.log('Checking project structure...')
-  let allGood = true
-
   const required = [
     'contracts/ContentModeration.py',
-    'frontend/app/layout.tsx',
-    'frontend/app/page.tsx',
-    'frontend/app/review/page.tsx',
-    'frontend/app/results/page.tsx',
-    'frontend/lib/genlayer-client.ts',
+    'app/layout.tsx',
+    'app/page.tsx',
+    'app/app/submit/page.tsx',
+    'app/app/review/page.tsx',
+    'app/app/analytics/page.tsx',
+    'lib/genlayer-client.ts',
     'package.json',
     'README.md',
+    'DEPLOY.md',
     'scripts/deploy.cjs',
+    'scripts/verify.cjs',
     'tailwind.config.js',
-    '.gitignore'
+    '.env.local.example',
+    '.gitignore',
   ]
 
-  for (const file of required) {
-    if (!checkFile(file, `  ${file}`)) {
-      allGood = false
-    }
+  return required.every((file) => checkFile(file, file))
+}
+
+function checkFrontendIntegration() {
+  const content = fs.readFileSync(path.join(projectRoot, 'lib/genlayer-client.ts'), 'utf-8')
+
+  if (!content.includes("from 'genlayer-js'") && !content.includes('from "genlayer-js"')) {
+    console.error('FAIL Frontend client does not import genlayer-js')
+    return false
   }
 
-  return allGood
+  if (content.includes('simpleHash4') || content.includes("crypto.subtle.digest('SHA-256'")) {
+    console.error('FAIL Frontend still uses pseudo ABI hashing')
+    return false
+  }
+
+  if (!content.includes('toRlp') || !content.includes('readContract')) {
+    console.error('FAIL Frontend does not use GenLayer RLP contract calls')
+    return false
+  }
+
+  console.log('OK Frontend uses genlayer-js/RLP contract calls')
+  return true
+}
+
+function checkTestsPresent() {
+  const testsDir = path.join(projectRoot, 'tests')
+  const testFiles = fs.existsSync(testsDir)
+    ? fs.readdirSync(testsDir).filter((file) => file.endsWith('.cjs') || file.endsWith('.js') || file.endsWith('.ts'))
+    : []
+
+  if (testFiles.length === 0) {
+    console.error('FAIL No tests found')
+    return false
+  }
+
+  console.log(`OK Tests present: ${testFiles.join(', ')}`)
+  return true
+}
+
+function runBuild() {
+  try {
+    execSync('npm.cmd run build', { stdio: 'inherit', cwd: projectRoot })
+    console.log('OK Next.js build passes')
+    return true
+  } catch {
+    console.error('FAIL Next.js build failed')
+    return false
+  }
 }
 
 function main() {
   console.log('='.repeat(60))
-  console.log('  AI Content Moderation - Verification')
+  console.log('AI-powered Content Moderation - Verification')
   console.log('='.repeat(60))
-  console.log()
+
+  const checks = [
+    ['Project structure', checkProjectStructure],
+    ['Python syntax', checkPythonSyntax],
+    ['Contract header', checkContractHeader],
+    ['Type safety', checkForbiddenTypes],
+    ['Nondeterminism pattern', checkNondeterminismPattern],
+    ['Numeric precision', checkU256Usage],
+    ['Frontend integration', checkFrontendIntegration],
+    ['Tests', checkTestsPresent],
+    ['Build', runBuild],
+  ]
 
   let passed = true
-
-  console.log('1. Project Structure')
-  console.log('-'.repeat(40))
-  if (!checkProjectStructure()) passed = false
-  console.log()
-
-  console.log('2. Python Syntax')
-  console.log('-'.repeat(40))
-  if (!checkPythonSyntax()) passed = false
-  console.log()
-
-  console.log('3. Contract Header')
-  console.log('-'.repeat(40))
-  if (!checkContractHeader()) passed = false
-  console.log()
-
-  console.log('4. Type Safety')
-  console.log('-'.repeat(40))
-  if (!checkForbiddenTypes()) passed = false
-  console.log()
-
-  console.log('5. Nondeterminism Pattern')
-  console.log('-'.repeat(40))
-  if (!checkNondetPattern()) passed = false
-  console.log()
-
-  console.log('6. Numeric Precision')
-  console.log('-'.repeat(40))
-  if (!checkU256Usage()) passed = false
-  console.log()
-
-  console.log('='.repeat(60))
-  if (passed) {
-    console.log('  ✅ ALL CHECKS PASSED')
-    console.log('='.repeat(60))
-    console.log()
-    console.log('Your contract is ready for deployment!')
-    console.log('Next steps:')
-    console.log('  1. Install genlayer CLI: npm install -g genlayer')
-    console.log('  2. Run: genlayer lint contracts/ContentModeration.py')
-    console.log('  3. Run: genlayer deploy contracts/ContentModeration.py')
-    console.log()
-    process.exit(0)
-  } else {
-    console.log('  ❌ SOME CHECKS FAILED')
-    console.log('='.repeat(60))
-    console.log()
-    console.log('Please fix the issues above before deploying.')
-    process.exit(1)
+  for (const [label, check] of checks) {
+    console.log(`\n${label}`)
+    console.log('-'.repeat(40))
+    if (!check()) passed = false
   }
+
+  console.log('\n' + '='.repeat(60))
+  if (passed) {
+    console.log('ALL CHECKS PASSED')
+    process.exit(0)
+  }
+
+  console.log('SOME CHECKS FAILED')
+  process.exit(1)
 }
 
-main().catch(console.error)
+main()

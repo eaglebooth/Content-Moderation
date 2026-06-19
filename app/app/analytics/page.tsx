@@ -36,7 +36,7 @@ export default function AnalyticsPage() {
     return (
       <AppShell title="Analytics" subtitle="Moderation statistics and insights.">
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-[#0787D6] border-t-transparent"></div>
+          <div className="h-12 w-12 animate-spin rounded-full border-2 border-[#ff5b12] border-t-transparent"></div>
         </div>
       </AppShell>
     )
@@ -44,9 +44,9 @@ export default function AnalyticsPage() {
 
   return (
     <AppShell title="Analytics" subtitle="Moderation statistics and insights.">
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Total Submissions" value={total.toString()} />
           <StatCard label="Approved" value={approved.toString()} />
           <StatCard label="Rejected" value={rejected.toString()} />
@@ -54,7 +54,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Approval Rate */}
-        <div className="bg-white rounded-[18px] border border-[#E7EEF3] p-8">
+        <div className="assist-card rounded-[26px] p-6 md:p-8">
           <h3 className="text-lg font-semibold text-[#111827] mb-6">Approval Rate</h3>
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -64,14 +64,14 @@ export default function AnalyticsPage() {
           </div>
           <div className="relative h-4 bg-[#F1F5F9] rounded-full overflow-hidden">
             <div
-              className="absolute left-0 top-0 h-full bg-[#0787D6] rounded-full transition-all duration-1000"
+              className="absolute left-0 top-0 h-full rounded-full bg-[#ff5b12] transition-all duration-1000"
               style={{ width: `${approvalRate}%` }}
             ></div>
           </div>
         </div>
 
         {/* Guidelines */}
-        <div className="bg-white rounded-[18px] border border-[#E7EEF3] p-8">
+        <div className="assist-card rounded-[26px] p-6 md:p-8">
           <h3 className="text-lg font-semibold text-[#111827] mb-6">Community Guidelines</h3>
           <div className="text-center py-12 text-[#64748B]">
             <p>Guidelines information will be displayed here.</p>
@@ -84,9 +84,9 @@ export default function AnalyticsPage() {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-white rounded-[18px] border border-[#E7EEF3] p-6">
-      <p className="text-sm text-[#64748B] mb-2">{label}</p>
-      <p className="text-3xl font-bold text-[#111827]">{value}</p>
+    <div className="assist-card rounded-[24px] p-5 transition duration-200 hover:-translate-y-0.5">
+      <p className="mb-2 text-sm font-semibold text-[#667085]">{label}</p>
+      <p className="text-3xl font-extrabold tracking-normal text-[#101114]">{value}</p>
     </div>
   )
 }

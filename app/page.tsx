@@ -2,271 +2,189 @@
 
 import Link from 'next/link'
 
+const metrics = [
+  { label: 'Requests', value: '1.2k' },
+  { label: 'Consensus', value: '94%' },
+  { label: 'Validators', value: '5/5' },
+]
+
+const categories = [
+  { label: 'Hate Speech', value: 12, color: '#16A34A' },
+  { label: 'Misinformation', value: 8, color: '#16A34A' },
+  { label: 'Harassment', value: 23, color: '#ff5b12' },
+  { label: 'Unsafe Content', value: 5, color: '#16A34A' },
+]
+
+const steps = [
+  { title: 'Submit', desc: 'Send text or image URLs into the moderation flow.' },
+  { title: 'Analyze', desc: 'AI scores risk categories and writes a clear reason.' },
+  { title: 'Validate', desc: 'A GenLayer validator group reaches transparent consensus.' },
+  { title: 'Record', desc: 'The final decision is available for review and appeals.' },
+]
+
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#F5FAFC]">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#F5FAFC]/80 backdrop-blur-xl border-b border-[#E7EEF3]">
-        <div className="max-w-[1180px] mx-auto px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0787D6] to-[#006DB4] flex items-center justify-center">
-              <span className="text-white font-bold text-xs">GM</span>
-            </div>
-            <span className="font-semibold text-[#111827] text-lg">GenLayer Moderation</span>
-          </Link>
+    <main className="assist-bg relative min-h-screen overflow-hidden">
+      <div className="assist-noise" />
 
-          <nav className="hidden md:flex items-center gap-8">
-            <a href="#how-it-works" className="text-sm font-medium text-[#64748B] hover:text-[#111827] transition-colors">How it Works</a>
-            <a href="#features" className="text-sm font-medium text-[#64748B] hover:text-[#111827] transition-colors">Features</a>
-            <a href="#trust" className="text-sm font-medium text-[#64748B] hover:text-[#111827] transition-colors">Trust</a>
-          </nav>
+      <header className="relative z-20 mx-auto flex max-w-[1180px] items-center justify-between px-4 py-6 md:px-8">
+        <Link href="/" className="flex h-10 items-center gap-2 rounded-full bg-white px-2.5 pr-5 shadow-sm">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#ff5b12] text-[11px] font-black text-white">
+            AI
+          </span>
+          <span className="whitespace-nowrap text-sm font-semibold text-[#101114]">AI-powered Content Moderation</span>
+        </Link>
 
-          <Link
-            href="/app"
-            className="px-5 py-2.5 bg-[#0787D6] hover:bg-[#006DB4] text-white rounded-xl text-sm font-medium transition-all duration-200"
-          >
-            Open Dashboard
-          </Link>
-        </div>
+        <nav className="hidden rounded-full bg-white/90 p-1 shadow-sm backdrop-blur-xl md:flex">
+          {[
+            ['How it Works', '#how-it-works'],
+            ['Features', '#features'],
+            ['Trust', '#trust'],
+          ].map(([label, href]) => (
+            <a key={href} href={href} className="rounded-full px-5 py-2 text-sm font-semibold text-[#596273] transition hover:bg-[#f6f7f8] hover:text-[#101114]">
+              {label}
+            </a>
+          ))}
+        </nav>
+
+        <Link href="/app" className="assist-btn-primary flex h-10 items-center gap-2 rounded-full px-2.5 pl-5 text-sm font-bold transition-all duration-200">
+          <span>Open App</span>
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#101114]">+</span>
+        </Link>
       </header>
 
-      {/* Hero */}
-      <section className="pt-24 pb-20 px-8">
-        <div className="max-w-[1180px] mx-auto">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-[#E7EEF3] mb-8">
-                <span className="w-2 h-2 rounded-full bg-[#16A34A]"></span>
-                <span className="text-sm font-medium text-[#64748B]">Built on GenLayer</span>
-              </div>
+      <section className="relative z-10 mx-auto max-w-[1180px] px-4 pb-10 pt-16 text-center md:px-8 md:pt-24">
+        <p className="mb-5 text-sm font-bold text-white/85">Built on GenLayer intelligent contracts</p>
+        <h1 className="mx-auto max-w-4xl text-5xl font-extrabold leading-tight tracking-normal text-white md:text-7xl">
+          Transparent AI Moderation Verified On-Chain
+        </h1>
+        <p className="mx-auto mt-6 max-w-2xl text-base font-semibold leading-7 text-white/88 md:text-lg">
+          Submit content, review AI reasoning, track validator consensus, and appeal decisions from a cleaner moderation workspace.
+        </p>
 
-              <h1 className="text-5xl lg:text-6xl font-bold text-[#111827] leading-tight mb-6 tracking-tight">
-                Transparent AI Moderation, Verified On-Chain
-              </h1>
-
-              <p className="text-lg text-[#64748B] leading-relaxed max-w-xl mb-10">
-                Submit content for AI-powered moderation. A decentralized validator network reviews each decision and keeps the reasoning visible on-chain.
-              </p>
-
-              <div className="flex flex-wrap gap-4">
-                <Link
-                  href="/app/submit"
-                  className="px-7 py-3.5 bg-[#0787D6] hover:bg-[#006DB4] text-white rounded-xl font-medium transition-all duration-200 inline-flex items-center gap-2"
-                >
-                  Open Moderation App
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
-                </Link>
-                <a
-                  href="#how-it-works"
-                  className="px-7 py-3.5 bg-white hover:bg-[#F8FAFC] text-[#111827] border border-[#E7EEF3] rounded-xl font-medium transition-all duration-200"
-                >
-                  See How it Works
-                </a>
-              </div>
-            </div>
-
-            <div className="relative">
-              <div className="absolute -inset-8 bg-gradient-to-br from-[#E8F4FC] to-[#F5FAFC] rounded-[32px]"></div>
-              <div className="relative bg-white rounded-[22px] border border-[#E7EEF3] p-8 shadow-sm">
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <div className="text-sm text-[#64748B] mb-1">Moderation Score</div>
-                    <div className="text-4xl font-bold text-[#111827]">87<span className="text-xl text-[#64748B] font-normal">/100</span></div>
-                  </div>
-                  <span className="px-4 py-2 rounded-full bg-[#DCFCE7] text-[#16A34A] text-sm font-semibold">APPROVED</span>
-                </div>
-
-                <div className="space-y-5 mb-8">
-                  {[
-                    { label: 'Hate Speech', value: 12, color: '#16A34A' },
-                    { label: 'Misinformation', value: 8, color: '#16A34A' },
-                    { label: 'Harassment', value: 23, color: '#FF6A18' },
-                    { label: 'Unsafe Content', value: 5, color: '#16A34A' },
-                  ].map((item) => (
-                    <div key={item.label}>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-[#64748B]">{item.label}</span>
-                        <span className="font-medium text-[#111827]">{item.value}%</span>
-                      </div>
-                      <div className="h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${item.value}%`, background: item.color }}></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="bg-[#F8FAFC] rounded-xl p-5 border border-[#E7EEF3]">
-                  <div className="text-xs text-[#64748B] mb-2 uppercase tracking-wider font-medium">Validator Consensus</div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex -space-x-2">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <div key={i} className="w-8 h-8 rounded-full bg-white border-2 border-[#F8FAFC] flex items-center justify-center text-xs font-medium text-[#0787D6]">
-                          V{i}
-                        </div>
-                      ))}
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-[#111827]">5/5 Agreement</div>
-                      <div className="text-xs text-[#64748B]">Confidence: 94%</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link href="/app/submit" className="assist-btn-primary flex h-12 items-center gap-2 rounded-full px-2.5 pl-6 text-sm font-bold transition-all duration-200">
+            <span>Start Moderation</span>
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#101114]">+</span>
+          </Link>
+          <a href="#how-it-works" className="flex h-12 items-center rounded-full bg-white px-6 text-sm font-bold text-[#101114] transition hover:-translate-y-0.5">
+            Explore Flow
+          </a>
         </div>
-      </section>
 
-      {/* Trust Bar */}
-      <section id="trust" className="py-16 px-8 bg-white border-y border-[#E7EEF3]">
-        <div className="max-w-[1180px] mx-auto">
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { title: 'AI-Powered Evaluation', desc: 'Advanced AI evaluates content against community guidelines with detailed reasoning.' },
-              { title: 'Multi-Validator Consensus', desc: 'Decentralized network of validators ensures unbiased, fair decisions.' },
-              { title: 'On-Chain Verification', desc: 'All decisions recorded on GenLayer blockchain for full transparency.' },
-            ].map((item) => (
-              <div key={item.title} className="text-center">
-                <h3 className="text-lg font-semibold text-[#111827] mb-2">{item.title}</h3>
-                <p className="text-sm text-[#64748B] leading-relaxed">{item.desc}</p>
+        <div className="assist-shell mx-auto mt-16 max-w-5xl rounded-[34px] p-3 text-left md:rounded-[44px] md:p-4">
+          <div className="rounded-[28px] bg-white p-4 md:p-5">
+            <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-2">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ff5b12] text-xs font-black text-white">AI</span>
+                <span className="text-lg font-bold text-[#101114]">Moderation Console</span>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How it Works */}
-      <section id="how-it-works" className="py-24 px-8">
-        <div className="max-w-[1180px] mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-[#111827] mb-4 tracking-tight">How it Works</h2>
-            <p className="text-lg text-[#64748B] max-w-2xl mx-auto">Four steps to transparent, verifiable content moderation.</p>
-          </div>
-
-          <div className="grid md:grid-cols-4 gap-8">
-            {[
-              { step: '01', title: 'Submit Content', desc: 'Upload text or image URLs for moderation evaluation.' },
-              { step: '02', title: 'AI Analyzes Risk', desc: 'AI evaluates content across multiple risk categories.' },
-              { step: '03', title: 'Validators Reach Consensus', desc: 'Decentralized validators review and vote on the decision.' },
-              { step: '04', title: 'Result Recorded On-Chain', desc: 'Final decision and reasoning are permanently recorded.' },
-            ].map((item) => (
-              <div key={item.step} className="relative">
-                <div className="text-6xl font-bold text-[#E8F4FC] mb-4">{item.step}</div>
-                <h3 className="text-lg font-semibold text-[#111827] mb-2">{item.title}</h3>
-                <p className="text-sm text-[#64748B] leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section id="features" className="py-24 px-8 bg-white border-y border-[#E7EEF3]">
-        <div className="max-w-[1180px] mx-auto">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <h2 className="text-4xl font-bold text-[#111827] mb-6 tracking-tight">Built for transparency and trust</h2>
-              <p className="text-lg text-[#64748B] leading-relaxed mb-10">
-                Every moderation decision is backed by AI analysis and validator consensus, with full reasoning recorded on-chain.
-              </p>
-
-              <div className="space-y-6">
-                {[
-                  { title: 'Detailed AI Reasoning', desc: 'Every decision includes a clear explanation of why content was flagged or approved.' },
-                  { title: 'Category Risk Scores', desc: 'See risk breakdown across hate speech, misinformation, harassment, and more.' },
-                  { title: 'Validator Transparency', desc: 'View individual validator votes and consensus confidence scores.' },
-                  { title: 'Appeal Process', desc: 'Submit appeals for reconsideration with full audit trail.' },
-                ].map((item) => (
-                  <div key={item.title} className="flex gap-4">
-                    <div className="w-6 h-6 rounded-full bg-[#E8F4FC] flex items-center justify-center shrink-0 mt-0.5">
-                      <svg className="w-4 h-4 text-[#0787D6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-[#111827] mb-1">{item.title}</h3>
-                      <p className="text-sm text-[#64748B] leading-relaxed">{item.desc}</p>
-                    </div>
-                  </div>
+              <div className="flex gap-2 overflow-x-auto">
+                {['Dashboard', 'Review', 'Analytics'].map((item, index) => (
+                  <span key={item} className={`rounded-full px-4 py-2 text-sm font-semibold ${index === 0 ? 'bg-[#101114] text-white' : 'bg-[#f6f7f8] text-[#667085]'}`}>
+                    {item}
+                  </span>
                 ))}
               </div>
             </div>
 
-            <div className="relative">
-              <div className="bg-[#F8FAFC] rounded-[22px] border border-[#E7EEF3] p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="text-sm font-medium text-[#64748B]">Recent Moderation</div>
-                  <span className="text-xs text-[#64748B]">Last 24 hours</span>
-                </div>
-                <div className="space-y-4">
-                  {[
-                    { id: '1024', status: 'APPROVED', score: 12, time: '2 min ago' },
-                    { id: '1023', status: 'FLAGGED', score: 45, time: '8 min ago' },
-                    { id: '1022', status: 'REJECTED', score: 78, time: '15 min ago' },
-                    { id: '1021', status: 'APPROVED', score: 23, time: '22 min ago' },
-                  ].map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-4 bg-white rounded-xl border border-[#E7EEF3]">
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-mono text-[#64748B]">#{item.id}</span>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          item.status === 'APPROVED' ? 'bg-[#DCFCE7] text-[#16A34A]' :
-                          item.status === 'FLAGGED' ? 'bg-[#FEF3C7] text-[#D97706]' :
-                          'bg-[#FEE2E2] text-[#EF4444]'
-                        }`}>
-                          {item.status}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm font-medium text-[#111827]">Score: {item.score}</span>
-                        <span className="text-xs text-[#64748B]">{item.time}</span>
-                      </div>
+            <div className="grid gap-4 lg:grid-cols-[1.35fr_0.9fr]">
+              <div className="assist-card-muted rounded-[24px] p-5">
+                <div className="mb-5 grid grid-cols-3 gap-3">
+                  {metrics.map((metric) => (
+                    <div key={metric.label} className="rounded-[20px] bg-white p-4">
+                      <p className="text-xs font-semibold text-[#667085]">{metric.label}</p>
+                      <p className="mt-1 text-2xl font-extrabold text-[#101114]">{metric.value}</p>
                     </div>
                   ))}
                 </div>
+
+                <div className="rounded-[22px] bg-white p-5">
+                  <div className="mb-5 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-[#667085]">Moderation Score</p>
+                      <p className="mt-1 text-4xl font-extrabold text-[#101114]">87<span className="text-lg font-semibold text-[#667085]">/100</span></p>
+                    </div>
+                    <span className="rounded-full bg-[#DCFCE7] px-4 py-2 text-xs font-bold text-[#16A34A]">APPROVED</span>
+                  </div>
+
+                  <div className="space-y-4">
+                    {categories.map((item) => (
+                      <div key={item.label}>
+                        <div className="mb-2 flex justify-between text-sm">
+                          <span className="font-semibold text-[#667085]">{item.label}</span>
+                          <span className="font-bold text-[#101114]">{item.value}%</span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-[#eef1f4]">
+                          <div className="h-full rounded-full" style={{ width: `${item.value}%`, background: item.color }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="assist-card-muted rounded-[24px] p-5">
+                <h2 className="text-lg font-bold text-[#101114]">Validator Consensus</h2>
+                <p className="mt-2 text-sm leading-6 text-[#667085]">Five validators agree on the decision, with reasoning preserved for review and appeals.</p>
+                <div className="mt-6 flex -space-x-2">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex h-11 w-11 items-center justify-center rounded-full border-4 border-[#f6f7f8] bg-white text-xs font-black text-[#101114]">
+                      V{i}
+                    </div>
+                  ))}
+                </div>
+                <Link href="/app/review" className="mt-8 inline-flex rounded-full bg-[#101114] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#ff5b12]">
+                  Open Review Queue
+                </Link>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-24 px-8">
-        <div className="max-w-[1180px] mx-auto text-center">
-          <h2 className="text-4xl font-bold text-[#111827] mb-4 tracking-tight">Make moderation transparent and verifiable.</h2>
-          <p className="text-lg text-[#64748B] mb-10 max-w-2xl mx-auto">
-            Join the future of content moderation with AI and blockchain technology.
-          </p>
-          <Link
-            href="/app/submit"
-            className="px-8 py-4 bg-[#0787D6] hover:bg-[#006DB4] text-white rounded-xl font-medium transition-all duration-200 inline-flex items-center gap-2"
-          >
-            Launch Moderation App
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>
-          </Link>
+      <section id="trust" className="relative z-10 bg-white px-4 py-16 md:px-8">
+        <div className="mx-auto grid max-w-[1180px] gap-4 md:grid-cols-3">
+          {[
+            ['AI Reasoning', 'Every decision includes a clear explanation and category scores.'],
+            ['Validator Review', 'Consensus keeps moderation decisions visible and auditable.'],
+            ['Appeals Ready', 'Users can challenge resolved submissions from the same workflow.'],
+          ].map(([title, desc]) => (
+            <div key={title} className="assist-card rounded-[24px] p-6">
+              <h3 className="text-lg font-bold text-[#101114]">{title}</h3>
+              <p className="mt-2 text-sm leading-6 text-[#667085]">{desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-8 bg-white border-t border-[#E7EEF3]">
-        <div className="max-w-[1180px] mx-auto text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#0787D6] to-[#006DB4] flex items-center justify-center">
-              <span className="text-white font-bold text-[10px]">GM</span>
-            </div>
-            <span className="font-semibold text-[#111827]">GenLayer Moderation</span>
+      <section id="how-it-works" className="relative z-10 px-4 py-20 md:px-8">
+        <div className="mx-auto max-w-[1180px]">
+          <div className="mb-10 text-center">
+            <h2 className="text-4xl font-extrabold tracking-normal text-white">How it Works</h2>
+            <p className="mt-3 font-semibold text-white/82">The same product flow, presented with a calmer visual hierarchy.</p>
           </div>
-          <p className="text-sm text-[#64748B]">
-            Built with GenLayer Intelligent Contracts
-          </p>
-          <p className="text-xs text-[#64748B] mt-2 opacity-60">
-            © 2025 AI Content Moderation Project
-          </p>
+          <div className="grid gap-4 md:grid-cols-4">
+            {steps.map((step, index) => (
+              <div key={step.title} className="rounded-[24px] bg-white p-6 shadow-sm">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ff5b12] text-sm font-black text-white">{index + 1}</span>
+                <h3 className="mt-5 text-lg font-bold text-[#101114]">{step.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-[#667085]">{step.desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      </footer>
-    </div>
+      </section>
+
+      <section id="features" className="relative z-10 bg-white px-4 py-16 text-center md:px-8">
+        <h2 className="mx-auto max-w-2xl text-4xl font-extrabold tracking-normal text-[#101114]">A sharper interface for moderation work.</h2>
+        <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-[#667085]">
+          The dashboard, submit form, review queue, analytics, and request detail pages now share the same card system, pill navigation, and CTA language.
+        </p>
+        <Link href="/app" className="assist-btn-primary mt-8 inline-flex rounded-full px-8 py-4 text-sm font-bold transition-all duration-200">
+          Launch Dashboard
+        </Link>
+      </section>
+    </main>
   )
 }

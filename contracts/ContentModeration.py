@@ -160,18 +160,30 @@ class ContentModeration(gl.Contract):
         content_type = self.submission_types[submission_id]
         guidelines = COMMUNITY_GUIDELINES
 
-        # Nondeterministic evaluation wrapped in strict_eq for consensus
+        # Nondeterministic evaluation wrapped in semantic consensus.
+        # Validators compare the meaning of the verdict, not byte-identical JSON.
         def run_evaluation() -> str:
             """
-            This function runs on two independent validator LLM nodes.
-            Both must produce byte-identical output for consensus.
+            This function runs on independent validator LLM nodes.
+            URL submissions fetch live web evidence on-chain before moderation.
             """
             # Build prompt based on content type
             if content_type == "text":
                 content_section = f"Text Content:\n{content[:4000]}"
             else:
-                # For images, we pass the URL - validator LLM should fetch and analyze
-                content_section = f"Image URL to evaluate: {content}\nNote: Analyze the image content at this URL."
+                try:
+                    rendered_page = gl.nondet.web.render(content)
+                    content_section = f"""Source URL:
+{content}
+
+Rendered web evidence:
+{str(rendered_page)[:6000]}"""
+                except Exception:
+                    content_section = f"""Source URL:
+{content}
+
+Rendered web evidence:
+WEB_RENDER_FAILED"""
 
             prompt = f"""You are a Community Content Moderator AI. Evaluate the following content against community guidelines.
 
@@ -213,12 +225,16 @@ IMPORTANT: Respond with ONLY a valid JSON object, no other text:
   "reason": "Brief explanation of the decision, citing specific guideline violations if any"
 }}"""
 
-            # Execute the LLM prompt
             result = gl.nondet.exec_prompt(prompt)
             return result
 
-        # Run consensus - both validators must produce identical output
-        consensus_result = gl.eq_principle.strict_eq(run_evaluation)
+        moderation_principle = """Two moderation results are equivalent when they have the same substantive verdict
+(APPROVED, REJECTED, or NEEDS_REVIEW), materially similar category risk assessment, and a reason that cites the same
+core evidence or guideline concern. Ignore harmless differences in JSON key order, wording, capitalization, or exact
+sentence structure. Reject equivalence if one result approves content that the other rejects, if a high-risk category
+is materially different, or if one result relies on evidence the other does not mention."""
+
+        consensus_result = gl.eq_principle.prompt_comparative(run_evaluation, moderation_principle)
 
         # Parse the deterministic JSON result
         try:
@@ -284,7 +300,7 @@ IMPORTANT: Respond with ONLY a valid JSON object, no other text:
         else:
             self.submission_appeal_reasons[submission_id] = appeal_reason
 
-        # Re-evaluate with stricter prompt
+        # Re-evaluate with stricter prompt and fresh web evidence when needed.
         content = self.submission_contents[submission_id]
         content_type = self.submission_types[submission_id]
         guidelines = COMMUNITY_GUIDELINES
@@ -297,7 +313,19 @@ IMPORTANT: Respond with ONLY a valid JSON object, no other text:
             if content_type == "text":
                 content_section = f"Text Content:\n{content[:4000]}"
             else:
-                content_section = f"Image URL to evaluate: {content}"
+                try:
+                    rendered_page = gl.nondet.web.render(content)
+                    content_section = f"""Source URL:
+{content}
+
+Rendered web evidence:
+{str(rendered_page)[:6000]}"""
+                except Exception:
+                    content_section = f"""Source URL:
+{content}
+
+Rendered web evidence:
+WEB_RENDER_FAILED"""
 
             prompt = f"""You are a Senior Content Moderator reviewing an appeal.
 This content was previously evaluated with verdict: {current_status}
@@ -333,8 +361,12 @@ Respond with ONLY JSON:
 
             return gl.nondet.exec_prompt(prompt)
 
-        # Run appeal consensus
-        consensus_result = gl.eq_principle.strict_eq(run_appeal_evaluation)
+        appeal_principle = """Two appeal results are equivalent when they reach the same appeal outcome and same
+substantive moderation verdict, with materially similar reasoning about whether the appeal evidence changes the prior
+decision. Ignore JSON formatting and phrasing differences. Reject equivalence if one result overturns the prior decision
+and the other does not, or if they disagree on the safety verdict."""
+
+        consensus_result = gl.eq_principle.prompt_comparative(run_appeal_evaluation, appeal_principle)
 
         try:
             result_data = json.loads(consensus_result)

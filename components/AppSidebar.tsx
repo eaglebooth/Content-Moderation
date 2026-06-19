@@ -97,49 +97,51 @@ export function AppSidebar() {
     return (
       <Link
         href={item.href}
-        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+        className={`flex h-10 items-center gap-2.5 rounded-full px-4 text-sm font-semibold transition-all duration-200 ${
           isActive
-            ? 'bg-[#E8F4FC] text-[#0787D6]'
-            : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#111827]'
+            ? 'bg-[#101114] text-white shadow-sm'
+            : 'text-[#596273] hover:bg-white hover:text-[#101114]'
         }`}
       >
-        {item.icon}
-        {item.label}
+        <span className="hidden sm:block">{item.icon}</span>
+        <span className="whitespace-nowrap">{item.label}</span>
       </Link>
     )
   }
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-[#E7EEF3] flex flex-col z-50">
-      <div className="p-5 border-b border-[#E7EEF3]">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0787D6] to-[#006DB4] flex items-center justify-center">
-            <span className="text-white font-bold text-xs">GM</span>
-          </div>
-          <span className="font-semibold text-[#111827]">GenLayer Moderation</span>
+    <aside className="relative z-30 mx-auto flex w-full max-w-[1180px] flex-col gap-4 px-4 pt-6 md:px-8">
+      <div className="flex items-center justify-between gap-4">
+        <Link href="/" className="flex h-10 items-center gap-2 rounded-full bg-white px-2.5 pr-5 shadow-sm">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#ff5b12] text-[11px] font-black text-white">
+            AI
+          </span>
+          <span className="whitespace-nowrap text-sm font-semibold text-[#101114]">AI-powered Content Moderation</span>
+        </Link>
+
+        <Link
+          href="/app/submit"
+          className="assist-btn-primary flex h-10 items-center gap-2 rounded-full px-2.5 pl-5 text-sm font-bold transition-all duration-200"
+        >
+          <span>New Moderation</span>
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#101114]">
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          </span>
         </Link>
       </div>
 
-      <div className="p-4">
-        <Link
-          href="/app/submit"
-          className="w-full flex items-center justify-center gap-2 bg-[#0787D6] hover:bg-[#006DB4] text-white py-2.5 px-4 rounded-xl font-medium transition-all duration-200 mb-6"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          New Moderation
-        </Link>
-
-        <nav className="space-y-1">
+      <div className="rounded-[28px] bg-white/88 p-2 shadow-sm backdrop-blur-xl">
+        <nav className="flex gap-1 overflow-x-auto">
           {navItems.map((item) => (
             <NavLink key={item.href} item={item} />
           ))}
         </nav>
       </div>
 
-      <div className="mt-auto p-4 border-t border-[#E7EEF3]">
-        <nav className="space-y-1">
+      <div className="hidden rounded-[28px] bg-white/55 p-2 shadow-sm backdrop-blur-xl lg:block">
+        <nav className="flex gap-1">
           {bottomItems.map((item) => (
             <NavLink key={item.href} item={item} />
           ))}

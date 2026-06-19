@@ -11,27 +11,39 @@ interface AppShellProps {
 
 export function AppShell({ children, title, subtitle }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-[#F5FAFC]">
+    <div className="assist-bg relative min-h-screen overflow-hidden">
+      <div className="assist-noise" />
       <AppSidebar />
-      <div className="md:pl-64">
-        <header className="sticky top-0 z-40 bg-[#F5FAFC]/90 backdrop-blur-xl border-b border-[#E7EEF3]">
-          <div className="px-8 py-5 flex items-center justify-between">
+      <div className="relative z-10 mx-auto max-w-[1180px] px-4 pb-10 pt-12 md:px-8 md:pt-20">
+        <section className="mb-10 text-center text-white">
+          <p className="mb-4 text-sm font-semibold text-white/85">AI-powered content moderation</p>
+          <h1 className="mx-auto max-w-3xl text-4xl font-extrabold leading-tight tracking-normal md:text-6xl">{title}</h1>
+          {subtitle && <p className="mx-auto mt-4 max-w-2xl text-base font-semibold text-white/86">{subtitle}</p>}
+        </section>
+
+        <div className="assist-shell rounded-[32px] p-3 md:rounded-[40px] md:p-4">
+          <header className="mb-4 rounded-[24px] bg-white px-4 py-4 md:px-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-[#111827] tracking-tight">{title}</h1>
-              {subtitle && <p className="text-sm text-[#64748B] mt-1">{subtitle}</p>}
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-[#E7EEF3]">
-                <span className="w-2 h-2 rounded-full bg-[#16A34A]"></span>
-                <span className="text-sm text-[#64748B]">Network active</span>
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ff5b12] text-xs font-black text-white">AI</span>
+                <h2 className="text-xl font-bold tracking-normal text-[#101114]">{title}</h2>
               </div>
-              <div className="w-9 h-9 rounded-xl bg-[#E8F4FC] flex items-center justify-center text-[#0787D6] font-semibold">
+              {subtitle && <p className="mt-1 text-sm text-[#667085]">{subtitle}</p>}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex h-10 items-center gap-2 rounded-full bg-[#f6f7f8] px-4">
+                <span className="h-2 w-2 rounded-full bg-[#16A34A]"></span>
+                <span className="text-sm font-semibold text-[#596273]">Network active</span>
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#101114] font-bold text-white">
                 E
               </div>
             </div>
           </div>
         </header>
-        <main className="p-8">{children}</main>
+          <main className="px-1 pb-1 md:px-2">{children}</main>
+        </div>
       </div>
     </div>
   )

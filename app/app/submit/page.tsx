@@ -10,7 +10,7 @@ export default function SubmitPage() {
   const [contentType, setContentType] = useState<'text' | 'image_url'>('text')
   const [submitter, setSubmitter] = useState('')
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<{ submissionId: string; txHash: string } | null>(null)
+  const [result, setResult] = useState<{ submissionId: string; txHash: string; evaluationTxHash?: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showAdvanced, setShowAdvanced] = useState(false)
 
@@ -35,11 +35,23 @@ export default function SubmitPage() {
       const client = getGenLayerClient()
       await client.initialize()
 
+      const statsBefore = await client.getStats().catch(() => null)
+      const submissionId = statsBefore ? Number(statsBefore.total_submissions).toString() : 'latest'
       const txHash = await client.submitContent(content, contentType, submitter)
 
+      let evaluationTxHash: string | undefined
+      if (submissionId !== 'latest') {
+        try {
+          evaluationTxHash = await client.evaluateSubmission(submissionId)
+        } catch (evaluationError) {
+          console.warn('Evaluation must be retried from the review queue:', evaluationError)
+        }
+      }
+
       setResult({
-        submissionId: 'pending',
-        txHash
+        submissionId,
+        txHash,
+        evaluationTxHash,
       })
       setContent('')
     } catch (err: any) {
@@ -51,9 +63,9 @@ export default function SubmitPage() {
 
   return (
     <AppShell title="Submit Content" subtitle="AI evaluation with decentralized validator consensus.">
-      <div className="grid lg:grid-cols-[1.4fr_1fr] gap-6">
+      <div className="grid gap-5 lg:grid-cols-[1.45fr_1fr]">
         {/* Left: Form */}
-        <div className="bg-white rounded-[18px] border border-[#E7EEF3] p-8">
+        <div className="assist-card rounded-[26px] p-6 md:p-8">
           {error && (
             <div className="mb-6 p-4 bg-[#FEE2E2] border border-[#FECACA] rounded-xl text-[#EF4444]">
               {error}
@@ -63,7 +75,10 @@ export default function SubmitPage() {
           {result && (
             <div className="mb-6 p-4 bg-[#DCFCE7] border border-[#BBF7D0] rounded-xl text-[#16A34A]">
               <p className="font-semibold">Content submitted successfully!</p>
-              <p className="text-sm mt-1">Transaction: {result.txHash.slice(0, 14)}...{result.txHash.slice(-8)}</p>
+              <p className="text-sm mt-1">Submit tx: {result.txHash.slice(0, 14)}...{result.txHash.slice(-8)}</p>
+              {result.evaluationTxHash && (
+                <p className="text-sm mt-1">Evaluation tx: {result.evaluationTxHash.slice(0, 14)}...{result.evaluationTxHash.slice(-8)}</p>
+              )}
               <p className="text-sm mt-1">Submission ID: {result.submissionId}</p>
               <p className="text-xs mt-2 text-[#64748B]">
                 <Link href="/app/review" className="underline hover:text-[#111827]">
@@ -76,16 +91,16 @@ export default function SubmitPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium mb-3 text-[#111827]">Content Type</label>
-              <div className="flex gap-3">
+                <div className="flex rounded-full bg-[#f1f3f5] p-1">
                 {(['text', 'image_url'] as const).map((type) => (
                   <button
                     key={type}
                     type="button"
                     onClick={() => setContentType(type)}
-                    className={`flex-1 px-5 py-3 rounded-xl transition-all duration-200 font-medium ${
+                    className={`flex-1 rounded-full px-5 py-3 font-semibold transition-all duration-200 ${
                       contentType === type
-                        ? 'bg-[#111827] text-white'
-                        : 'bg-white border border-[#E7EEF3] text-[#64748B] hover:border-[#0787D6]'
+                        ? 'bg-[#101114] text-white shadow-sm'
+                        : 'text-[#667085] hover:bg-white hover:text-[#101114]'
                     }`}
                   >
                     {type === 'text' ? 'Text' : 'Image URL'}
@@ -103,7 +118,7 @@ export default function SubmitPage() {
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   rows={8}
-                  className="w-full px-4 py-3 bg-white border border-[#E7EEF3] rounded-xl text-[#111827] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0787D6] focus:border-transparent transition-all resize-none"
+                  className="assist-input w-full resize-none rounded-[20px] px-4 py-3 placeholder-[#98A2B3]"
                   placeholder="Enter your text content here..."
                 />
               ) : (
@@ -111,7 +126,7 @@ export default function SubmitPage() {
                   type="url"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-[#E7EEF3] rounded-xl text-[#111827] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0787D6] focus:border-transparent transition-all"
+                  className="assist-input w-full rounded-full px-4 py-3 placeholder-[#98A2B3]"
                   placeholder="https://example.com/image.jpg"
                 />
               )}
@@ -123,7 +138,7 @@ export default function SubmitPage() {
                 type="text"
                 value={submitter}
                 onChange={(e) => setSubmitter(e.target.value)}
-                className="w-full px-4 py-3 bg-white border border-[#E7EEF3] rounded-xl text-[#111827] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0787D6] focus:border-transparent transition-all"
+                className="assist-input w-full rounded-full px-4 py-3 placeholder-[#98A2B3]"
                 placeholder="Enter your name or ID"
               />
             </div>
@@ -140,7 +155,7 @@ export default function SubmitPage() {
                 Advanced Options
               </button>
               {showAdvanced && (
-                <div className="mt-4 p-4 bg-[#F8FAFC] rounded-xl border border-[#E7EEF3]">
+                <div className="assist-card-muted mt-4 rounded-[20px] p-4">
                   <p className="text-sm text-[#64748B]">Additional options will be available here.</p>
                 </div>
               )}
@@ -149,7 +164,7 @@ export default function SubmitPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-[52px] bg-[#0787D6] hover:bg-[#006DB4] disabled:opacity-70 text-white rounded-xl font-medium transition-all duration-200"
+              className="assist-btn-primary h-[52px] w-full rounded-full font-bold transition-all duration-200 disabled:opacity-70"
             >
               {loading ? 'Analyzing with validators...' : 'Submit for Moderation'}
             </button>
@@ -158,7 +173,7 @@ export default function SubmitPage() {
 
         {/* Right: Help Panel */}
         <div className="space-y-6">
-          <div className="bg-white rounded-[18px] border border-[#E7EEF3] p-6">
+          <div className="assist-card rounded-[24px] p-6">
             <h3 className="text-lg font-semibold text-[#111827] mb-6">How moderation works</h3>
             <div className="space-y-5">
               {[
@@ -168,7 +183,7 @@ export default function SubmitPage() {
                 { step: '4', title: 'Result', desc: 'Decision recorded on-chain.' },
               ].map((item) => (
                 <div key={item.step} className="flex gap-4">
-                  <div className="w-8 h-8 rounded-lg bg-[#E8F4FC] flex items-center justify-center text-sm font-semibold text-[#0787D6] shrink-0">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ff5b12] text-sm font-bold text-white">
                     {item.step}
                   </div>
                   <div>
@@ -180,11 +195,11 @@ export default function SubmitPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-[18px] border border-[#E7EEF3] p-6">
+          <div className="assist-card rounded-[24px] p-6">
             <h3 className="text-lg font-semibold text-[#111827] mb-4">Info</h3>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-[#0787D6] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-[#ff5b12] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div>
@@ -193,7 +208,7 @@ export default function SubmitPage() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-[#0787D6] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-[#ff5b12] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
                 <div>

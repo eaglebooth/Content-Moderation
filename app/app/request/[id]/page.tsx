@@ -56,7 +56,7 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
     return (
       <AppShell title={`Request #${params.id}`} subtitle="Loading moderation result...">
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-[#0787D6] border-t-transparent"></div>
+          <div className="h-12 w-12 animate-spin rounded-full border-2 border-[#ff5b12] border-t-transparent"></div>
         </div>
       </AppShell>
     )
@@ -67,7 +67,7 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
       <AppShell title={`Request #${params.id}`} subtitle="Error loading request">
         <div className="text-center py-20">
           <p className="text-[#EF4444] mb-4">{error || 'Submission not found'}</p>
-          <Link href="/app/review" className="text-[#0787D6] font-medium hover:underline">
+          <Link href="/app/review" className="font-medium text-[#101114] hover:underline">
             ← Back to Review Queue
           </Link>
         </div>
@@ -82,7 +82,7 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
     <AppShell title={`Request #${params.id}`} subtitle={`Submitted on ${new Date(Number(submission.timestamp) * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`}>
       {/* Back button */}
       <div className="mb-6">
-        <Link href="/app/review" className="inline-flex items-center gap-2 text-sm font-medium text-[#0787D6] hover:text-[#006DB4] transition-colors">
+        <Link href="/app/review" className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-[#101114] shadow-sm transition-colors hover:text-[#ff5b12]">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -91,8 +91,8 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
       </div>
 
       {/* Status and Score */}
-      <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-6 mb-6">
-        <div className="bg-white rounded-[18px] border border-[#E7EEF3] p-8">
+      <div className="mb-5 grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="assist-card rounded-[26px] p-6 md:p-8">
           <div className="flex items-center gap-3 mb-6">
             <span className={`px-4 py-2 rounded-full text-sm font-semibold ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} border`}>
               {statusConfig.label}
@@ -116,7 +116,7 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
         </div>
 
         <div className="space-y-6">
-          <div className="bg-white rounded-[18px] border border-[#E7EEF3] p-8 text-center">
+          <div className="assist-card rounded-[26px] p-8 text-center">
             <p className="text-sm text-[#64748B] mb-2">Overall Score</p>
             <p className={`text-6xl font-bold ${
               Number(submission.score) >= 60 ? 'text-[#EF4444]' :
@@ -128,7 +128,7 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
             <p className="text-sm text-[#64748B] mt-2">out of 100</p>
           </div>
 
-          <div className="bg-white rounded-[18px] border border-[#E7EEF3] p-6">
+          <div className="assist-card rounded-[24px] p-6">
             <h3 className="text-sm font-semibold text-[#64748B] mb-4">Validator Consensus</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -150,7 +150,7 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
 
       {/* Category Risk Analysis */}
       {categoryScores.length > 0 && (
-        <div className="bg-white rounded-[18px] border border-[#E7EEF3] p-8 mb-6">
+        <div className="assist-card mb-5 rounded-[26px] p-6 md:p-8">
           <h3 className="text-lg font-semibold text-[#111827] mb-6">Category Risk Analysis</h3>
           <div className="space-y-5">
             {categoryScores.map(({ category, score }) => (
@@ -179,7 +179,7 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
       )}
 
       {/* On-Chain Verification */}
-      <div className="bg-white rounded-[18px] border border-[#E7EEF3] p-8">
+      <div className="assist-card rounded-[26px] p-6 md:p-8">
         <h3 className="text-lg font-semibold text-[#111827] mb-4">On-Chain Verification</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between py-3 border-b border-[#E7EEF3]">
@@ -202,7 +202,7 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
             href="https://genlayer.com/explorer"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-[#E7EEF3] text-[#111827] rounded-xl text-sm font-medium hover:bg-[#F8FAFC] transition-all duration-200"
+            className="assist-btn-secondary inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-200"
           >
             View on Explorer
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

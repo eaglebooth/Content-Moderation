@@ -35,12 +35,12 @@ export default function AppDashboard() {
     <AppShell title="Overview" subtitle="Your moderation network is operating normally.">
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-[#0787D6] border-t-transparent"></div>
+          <div className="h-12 w-12 animate-spin rounded-full border-2 border-[#ff5b12] border-t-transparent"></div>
         </div>
       ) : (
         <>
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             <StatCard label="Total Requests" value={total.toString()} />
             <StatCard label="Approved Rate" value={`${approvalRate}%`} />
             <StatCard label="Average Consensus" value="94%" />
@@ -48,13 +48,13 @@ export default function AppDashboard() {
           </div>
 
           {/* Two Column Layout */}
-          <div className="grid lg:grid-cols-[1.4fr_1fr] gap-6">
+          <div className="grid gap-5 lg:grid-cols-[1.45fr_1fr]">
             {/* Left: Activity */}
-            <div className="bg-white rounded-[18px] border border-[#E7EEF3] p-6">
+            <div className="assist-card rounded-[24px] p-6">
               <h3 className="text-lg font-semibold text-[#111827] mb-6">Recent Moderation Requests</h3>
-              <div className="text-center py-12 text-[#64748B]">
+              <div className="assist-card-muted rounded-[22px] py-14 text-center text-[#667085]">
                 <p>No recent requests to display</p>
-                <Link href="/app/submit" className="text-[#0787D6] font-medium hover:underline mt-2 inline-block">
+                <Link href="/app/submit" className="mt-3 inline-flex items-center rounded-full bg-[#101114] px-5 py-2 text-sm font-bold text-white transition hover:bg-[#ff5b12]">
                   Submit your first request →
                 </Link>
               </div>
@@ -62,7 +62,7 @@ export default function AppDashboard() {
 
             {/* Right: Network Status */}
             <div className="space-y-6">
-              <div className="bg-white rounded-[18px] border border-[#E7EEF3] p-6">
+              <div className="assist-card rounded-[24px] p-6">
                 <h3 className="text-lg font-semibold text-[#111827] mb-4">Network Status</h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -83,16 +83,16 @@ export default function AppDashboard() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-[18px] border border-[#E7EEF3] p-6">
+              <div className="assist-card rounded-[24px] p-6">
                 <h3 className="text-lg font-semibold text-[#111827] mb-4">Quick Actions</h3>
                 <div className="space-y-3">
-                  <Link href="/app/submit" className="block w-full text-center px-4 py-3 bg-[#0787D6] hover:bg-[#006DB4] text-white rounded-xl font-medium transition-all duration-200">
+                  <Link href="/app/submit" className="assist-btn-primary block w-full rounded-full px-4 py-3 text-center font-bold transition-all duration-200">
                     Submit Content
                   </Link>
-                  <Link href="/app/review" className="block w-full text-center px-4 py-3 bg-white hover:bg-[#F8FAFC] text-[#111827] border border-[#E7EEF3] rounded-xl font-medium transition-all duration-200">
+                  <Link href="/app/review" className="assist-btn-secondary block w-full rounded-full px-4 py-3 text-center font-semibold transition-all duration-200">
                     Review Queue
                   </Link>
-                  <Link href="/app/analytics" className="block w-full text-center px-4 py-3 bg-white hover:bg-[#F8FAFC] text-[#111827] border border-[#E7EEF3] rounded-xl font-medium transition-all duration-200">
+                  <Link href="/app/analytics" className="assist-btn-secondary block w-full rounded-full px-4 py-3 text-center font-semibold transition-all duration-200">
                     View Analytics
                   </Link>
                 </div>
@@ -107,9 +107,9 @@ export default function AppDashboard() {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-white rounded-[18px] border border-[#E7EEF3] p-6">
-      <p className="text-sm text-[#64748B] mb-2">{label}</p>
-      <p className="text-3xl font-bold text-[#111827]">{value}</p>
+    <div className="assist-card rounded-[24px] p-5 transition duration-200 hover:-translate-y-0.5">
+      <p className="mb-2 text-sm font-semibold text-[#667085]">{label}</p>
+      <p className="text-3xl font-extrabold tracking-normal text-[#101114]">{value}</p>
     </div>
   )
 }
