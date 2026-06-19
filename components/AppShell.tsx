@@ -14,11 +14,11 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
     <div className="assist-bg relative min-h-screen overflow-hidden">
       <div className="assist-noise" />
       <AppSidebar />
-      <div className="relative z-10 mx-auto max-w-[1180px] px-4 pb-10 pt-12 md:px-8 md:pt-20">
-        <section className="mb-10 text-center text-white">
-          <p className="mb-4 text-sm font-semibold text-white/85">AI-powered content moderation</p>
+      <div className="relative z-10 mx-auto max-w-[1180px] px-4 pb-10 pt-6 md:px-8 md:pt-8">
+        <section className="mb-7 text-center text-white">
+          <p className="mb-3 text-sm font-semibold text-white/85">AI-powered content moderation</p>
           <h1 className="mx-auto max-w-3xl text-4xl font-extrabold leading-tight tracking-normal md:text-6xl">{title}</h1>
-          {subtitle && <p className="mx-auto mt-4 max-w-2xl text-base font-semibold text-white/86">{subtitle}</p>}
+          {subtitle && <p className="mx-auto mt-3 max-w-2xl text-base font-semibold text-white/86">{subtitle}</p>}
         </section>
 
         <div className="assist-shell rounded-[32px] p-3 md:rounded-[40px] md:p-4">
