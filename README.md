@@ -107,6 +107,7 @@ Set `.env.local`:
 
 ```env
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x3CEa734cCB8d30b4d76476Da32c513892aeD13Ae
+NEXT_PUBLIC_NETWORK=studionet
 NEXT_PUBLIC_GENLAYER_RPC_URL=https://rpc.testnet.genlayer.com
 ```
 
@@ -146,6 +147,7 @@ Required Vercel environment variables:
 
 ```env
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x3CEa734cCB8d30b4d76476Da32c513892aeD13Ae
+NEXT_PUBLIC_NETWORK=studionet
 NEXT_PUBLIC_GENLAYER_RPC_URL=https://rpc.testnet.genlayer.com
 ```
 

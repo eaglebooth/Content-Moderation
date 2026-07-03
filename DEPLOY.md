@@ -11,6 +11,7 @@
 
 ```env
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x3CEa734cCB8d30b4d76476Da32c513892aeD13Ae
+NEXT_PUBLIC_NETWORK=studionet
 NEXT_PUBLIC_GENLAYER_RPC_URL=https://rpc.testnet.genlayer.com
 ```
 
@@ -71,6 +72,6 @@ Vercel settings:
 | Issue | Fix |
 |---|---|
 | Missing contract address | Set `NEXT_PUBLIC_CONTRACT_ADDRESS` in local/Vercel env |
-| Contract calls fail | Confirm wallet is on GenLayer testnet and contract was redeployed after code changes |
+| Contract calls fail | Confirm wallet is on GenLayer Studio, the contract address matches the latest deployment, and the contract was redeployed after code changes |
 | Old UI appears locally | Stop the old Node process on port 3000 and restart `npm run dev` or `npm run start` |
 | Evaluation remains pending | Use the Review Queue `Evaluate` button after the submit transaction is accepted |

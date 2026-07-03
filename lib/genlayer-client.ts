@@ -4,10 +4,11 @@ import { createClient } from 'genlayer-js'
 import { toHex, toRlp, type Address } from 'viem'
 
 const DEFAULT_RPC_URL = 'https://rpc.testnet.genlayer.com'
+const NETWORK_NAME = process.env.NEXT_PUBLIC_NETWORK || 'studionet'
 
 const genlayerTestnet = {
   id: 61999,
-  name: 'GenLayer Testnet',
+  name: NETWORK_NAME === 'studionet' ? 'GenLayer Studio' : 'GenLayer Testnet',
   rpcUrls: {
     default: {
       http: [process.env.NEXT_PUBLIC_GENLAYER_RPC_URL || DEFAULT_RPC_URL],
@@ -139,6 +140,14 @@ class GenLayerClient {
 
   constructor(contractAddress: string) {
     this.contractAddress = contractAddress as Address
+  }
+
+  getContractAddress(): string {
+    return this.contractAddress
+  }
+
+  getNetworkName(): string {
+    return NETWORK_NAME
   }
 
   async initialize() {
@@ -277,6 +286,14 @@ export function getGenLayerClient(): GenLayerClient {
     clientInstance = new GenLayerClient(contractAddress)
   }
   return clientInstance
+}
+
+export function getContractConfig() {
+  return {
+    address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '',
+    network: NETWORK_NAME,
+    rpcUrl: process.env.NEXT_PUBLIC_GENLAYER_RPC_URL || DEFAULT_RPC_URL,
+  }
 }
 
 export { GenLayerClient }

@@ -1,7 +1,8 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { AppSidebar } from './AppSidebar'
+import { getContractConfig, getGenLayerClient } from '@/lib/genlayer-client'
 
 interface AppShellProps {
   children: React.ReactNode
@@ -10,6 +11,45 @@ interface AppShellProps {
 }
 
 export function AppShell({ children, title, subtitle }: AppShellProps) {
+  const config = useMemo(() => getContractConfig(), [])
+  const [wallet, setWallet] = useState('')
+  const [walletStatus, setWalletStatus] = useState(config.address ? 'Contract configured' : 'Missing contract address')
+
+  useEffect(() => {
+    try {
+      const client = getGenLayerClient()
+      client.initialize().then(() => {
+        const account = client.getConnectedAccount()
+        if (account) {
+          setWallet(account)
+          setWalletStatus('Wallet connected')
+        }
+      }).catch(() => {
+        setWalletStatus(config.address ? 'Connect wallet to write' : 'Missing contract address')
+      })
+    } catch (error) {
+      setWalletStatus(error instanceof Error ? error.message : 'Contract not configured')
+    }
+  }, [config.address])
+
+  async function handleConnectWallet() {
+    try {
+      const client = getGenLayerClient()
+      await client.initialize()
+      const connected = await client.connectWallet()
+      if (!connected) {
+        setWalletStatus('Wallet connection cancelled')
+        return
+      }
+      setWallet(client.getConnectedAccount() || '')
+      setWalletStatus('Wallet connected')
+    } catch (error) {
+      setWalletStatus(error instanceof Error ? error.message : 'Wallet connection failed')
+    }
+  }
+
+  const shortAddress = (value: string) => value ? `${value.slice(0, 6)}...${value.slice(-4)}` : 'Not set'
+
   return (
     <div className="assist-bg relative min-h-screen overflow-hidden">
       <div className="assist-noise" />
@@ -31,13 +71,23 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
               </div>
               {subtitle && <p className="mt-1 text-sm text-[#667085]">{subtitle}</p>}
             </div>
-            <div className="flex items-center gap-2">
-              <div className="flex h-10 items-center gap-2 rounded-full bg-[#f6f7f8] px-4">
-                <span className="h-2 w-2 rounded-full bg-[#16A34A]"></span>
-                <span className="text-sm font-semibold text-[#596273]">Network active</span>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="rounded-[18px] bg-[#f6f7f8] px-4 py-2">
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${config.address ? 'bg-[#16A34A]' : 'bg-[#F59E0B]'}`}></span>
+                  <span className="text-xs font-black uppercase tracking-[0.16em] text-[#667085]">{config.network}</span>
+                </div>
+                <p className="mt-0.5 text-sm font-bold text-[#101114]">Contract {shortAddress(config.address)}</p>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#101114] font-bold text-white">
-                E
+              <button
+                type="button"
+                onClick={handleConnectWallet}
+                className="flex h-12 items-center justify-center rounded-full bg-[#101114] px-5 text-sm font-bold text-white transition hover:bg-[#ff5b12]"
+              >
+                {wallet ? shortAddress(wallet) : 'Connect wallet'}
+              </button>
+              <div className="hidden max-w-[180px] text-xs font-semibold text-[#667085] lg:block">
+                {walletStatus}
               </div>
             </div>
           </div>
