@@ -3,9 +3,9 @@
 import Link from 'next/link'
 
 const metrics = [
-  { label: 'Requests', value: '1.2k' },
-  { label: 'Consensus', value: '94%' },
-  { label: 'Validators', value: '5/5' },
+  { label: 'Appeal window', value: '24h' },
+  { label: 'Evidence modes', value: '2' },
+  { label: 'Sender identity', value: 'On-chain' },
 ]
 
 const categories = [
@@ -47,9 +47,8 @@ export default function LandingPage() {
           ))}
         </nav>
 
-        <Link href="/app" className="assist-btn-primary flex h-10 items-center gap-2 rounded-full px-2.5 pl-5 text-sm font-bold transition-all duration-200">
+        <Link href="/app" className="assist-btn-primary flex h-10 items-center rounded-full px-6 text-sm font-bold transition-all duration-200">
           <span>Open App</span>
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#101114]">+</span>
         </Link>
       </header>
 
@@ -63,9 +62,8 @@ export default function LandingPage() {
         </p>
 
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link href="/app/submit" className="assist-btn-primary flex h-12 items-center gap-2 rounded-full px-2.5 pl-6 text-sm font-bold transition-all duration-200">
+          <Link href="/app/submit" className="assist-btn-primary flex h-12 items-center rounded-full px-7 text-sm font-bold transition-all duration-200">
             <span>Start Moderation</span>
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#101114]">+</span>
           </Link>
           <a href="#how-it-works" className="flex h-12 items-center rounded-full bg-white px-6 text-sm font-bold text-[#101114] transition hover:-translate-y-0.5">
             Explore Flow
@@ -77,13 +75,21 @@ export default function LandingPage() {
             <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-2">
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ff5b12] text-xs font-black text-white">AI</span>
-                <span className="text-lg font-bold text-[#101114]">Moderation Console</span>
+                <span className="text-lg font-bold text-[#101114]">Workflow Preview</span>
               </div>
               <div className="flex gap-2 overflow-x-auto">
-                {['Dashboard', 'Review', 'Analytics'].map((item, index) => (
-                  <span key={item} className={`rounded-full px-4 py-2 text-sm font-semibold ${index === 0 ? 'bg-[#101114] text-white' : 'bg-[#f6f7f8] text-[#667085]'}`}>
+                {[
+                  ['Dashboard', '/app'],
+                  ['Review', '/app/review'],
+                  ['Analytics', '/app/analytics'],
+                ].map(([item, href], index) => (
+                  <Link
+                    key={item}
+                    href={href}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5 ${index === 0 ? 'bg-[#101114] text-white' : 'bg-[#f6f7f8] text-[#667085] hover:bg-[#eef1f4] hover:text-[#101114]'}`}
+                  >
                     {item}
-                  </span>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -126,14 +132,8 @@ export default function LandingPage() {
 
               <div className="assist-card-muted rounded-[24px] p-5">
                 <h2 className="text-lg font-bold text-[#101114]">Validator Consensus</h2>
-                <p className="mt-2 text-sm leading-6 text-[#667085]">Five validators agree on the decision, with reasoning preserved for review and appeals.</p>
-                <div className="mt-6 flex -space-x-2">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="flex h-11 w-11 items-center justify-center rounded-full border-4 border-[#f6f7f8] bg-white text-xs font-black text-[#101114]">
-                      V{i}
-                    </div>
-                  ))}
-                </div>
+                <p className="mt-2 text-sm leading-6 text-[#667085]">GenLayer validators compare the substantive verdict and evidence basis, while allowing harmless differences in wording.</p>
+                <div className="mt-6 rounded-[20px] bg-white p-4 text-sm font-bold text-[#0478ba]">Semantic equivalence, not byte equality</div>
                 <Link href="/app/review" className="mt-8 inline-flex rounded-full bg-[#101114] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#ff5b12]">
                   Open Review Queue
                 </Link>

@@ -1,77 +1,30 @@
-# Deployment Guide
+# ContentModeration V2 Deployment Handoff
 
-## Current Deployment Values
+## Current State
 
-- Project: `AI-powered Content Moderation`
-- Live app: https://content-moderation-zeta.vercel.app/
-- Current contract address: `0x3CEa734cCB8d30b4d76476Da32c513892aeD13Ae`
-- Explorer: https://genlayer.com/explorer?address=0x3CEa734cCB8d30b4d76476Da32c513892aeD13Ae
+- Network: GenLayer Studio (`studionet`)
+- Contract: `0x63D14f690a7590836d3a890AaDAbb5b63882D347`
+- Frontend: approved for GitHub and Vercel deployment
+- Previous V1 address: incompatible and removed from runtime configuration
 
-## Required Environment Variables
+## Required Studio Checks
+
+Test this sequence after deploying `contracts/ContentModeration.py`:
+
+1. Call payable `submit` with text and a non-zero GEN bond.
+2. Call `get_system_state` and confirm `submission_count` and `total_bonded` increased.
+3. Call `evaluate` and verify a semantic verdict is stored.
+4. For rejection/review, call `open_appeal` as the original submitter with a public HTTPS evidence URL.
+5. Call `resolve_appeal`.
+6. Call `claim_bond` for an approved outcome, or `accept_rejection` then `slash_bond` for a rejected outcome.
+7. Confirm the transfer and settlement record.
+
+After all checks pass, set:
 
 ```env
-NEXT_PUBLIC_CONTRACT_ADDRESS=0x3CEa734cCB8d30b4d76476Da32c513892aeD13Ae
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x63D14f690a7590836d3a890AaDAbb5b63882D347
 NEXT_PUBLIC_NETWORK=studionet
-NEXT_PUBLIC_GENLAYER_RPC_URL=https://rpc.testnet.genlayer.com
+NEXT_PUBLIC_GENLAYER_RPC=
 ```
 
-Set these in both `.env.local` and the Vercel project settings.
-
-## Local Verification
-
-```bash
-npm install
-npm run test
-npm run verify
-```
-
-`npm run verify` checks project structure, contract nondeterminism patterns, frontend GenLayer integration, tests, and a production Next.js build.
-
-## Deploy Contract
-
-The GenLayer CLI version available in this environment does not expose a `lint` command. Use local verification first, then deploy:
-
-```bash
-npm run verify
-npx genlayer deploy contracts/ContentModeration.py --name ContentModeration
-```
-
-After deployment:
-
-1. Copy the new contract address.
-2. Update `.env.local`.
-3. Update Vercel environment variables.
-4. Update this file and `README.md`.
-5. Redeploy the frontend.
-
-## Deploy Frontend
-
-```bash
-vercel --prod
-```
-
-Vercel settings:
-
-- Framework preset: Next.js
-- Root directory: `.`
-- Build command: `npm run build`
-- Output directory: `.next`
-
-## Demo Checklist
-
-1. Open the live app.
-2. Submit text content.
-3. Submit URL content to demonstrate web evidence.
-4. Trigger or retry evaluation from Review Queue.
-5. Open the request detail page.
-6. Show verdict, score, category scores, and AI reason.
-7. Submit an appeal for a resolved request.
-
-## Troubleshooting
-
-| Issue | Fix |
-|---|---|
-| Missing contract address | Set `NEXT_PUBLIC_CONTRACT_ADDRESS` in local/Vercel env |
-| Contract calls fail | Confirm wallet is on GenLayer Studio, the contract address matches the latest deployment, and the contract was redeployed after code changes |
-| Old UI appears locally | Stop the old Node process on port 3000 and restart `npm run dev` or `npm run start` |
-| Evaluation remains pending | Use the Review Queue `Evaluate` button after the submit transaction is accepted |
+Then run `npm test`, `npm run build`, open the local app, and verify the Sync Contract button before any GitHub or Vercel deployment.

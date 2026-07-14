@@ -32,7 +32,7 @@ async function main() {
     process.exit(1)
   }
 
-  const confirm = await ask('\nDeploy to GenLayer testnet? Type "yes" to continue: ')
+  const confirm = await ask('\nDeploy ContentModeration V2 to the currently selected GenLayer Studio network? Type "yes" to continue: ')
   if (confirm.toLowerCase() !== 'yes') {
     console.log('Deployment cancelled.')
     rl.close()
@@ -63,7 +63,8 @@ async function main() {
     console.log(`Explorer: https://genlayer.com/explorer?address=${contractAddress}`)
     console.log('\nUpdate environment variables:')
     console.log(`NEXT_PUBLIC_CONTRACT_ADDRESS=${contractAddress}`)
-    console.log('NEXT_PUBLIC_GENLAYER_RPC_URL=https://rpc.testnet.genlayer.com')
+    console.log('NEXT_PUBLIC_NETWORK=studionet')
+    console.log('NEXT_PUBLIC_GENLAYER_RPC=')
   } catch (error) {
     console.error('Deployment failed.')
     console.error(error.message)

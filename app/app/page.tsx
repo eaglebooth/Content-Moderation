@@ -1,115 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { getGenLayerClient, Stats } from '@/lib/genlayer-client'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { AppShell } from '@/components/AppShell'
+import { getGenLayerClient, type Submission, type SystemState } from '@/lib/genlayer-client'
 
-export default function AppDashboard() {
-  const [stats, setStats] = useState<Stats | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
-    setLoading(true)
-    try {
-      const client = getGenLayerClient()
-      await client.initialize()
-      const data = await client.getStats()
-      setStats(data)
-    } catch (error) {
-      console.error('Failed to load stats:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const total = Number(stats?.total_submissions || 0n)
-  const approved = Number(stats?.approved || 0n)
-  const approvalRate = total > 0 ? Math.round((approved / total) * 100) : 0
-
-  return (
-    <AppShell title="Overview" subtitle="Your moderation network is operating normally.">
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="h-12 w-12 animate-spin rounded-full border-2 border-[#ff5b12] border-t-transparent"></div>
-        </div>
-      ) : (
-        <>
-          {/* Stats Grid */}
-          <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Total Requests" value={total.toString()} />
-            <StatCard label="Approved Rate" value={`${approvalRate}%`} />
-            <StatCard label="Average Consensus" value="94%" />
-            <StatCard label="Pending Review" value={Number(stats?.needs_review || 0n).toString()} />
-          </div>
-
-          {/* Two Column Layout */}
-          <div className="grid gap-5 lg:grid-cols-[1.45fr_1fr]">
-            {/* Left: Activity */}
-            <div className="assist-card rounded-[24px] p-6">
-              <h3 className="text-lg font-semibold text-[#111827] mb-6">Recent Moderation Requests</h3>
-              <div className="assist-card-muted rounded-[22px] py-14 text-center text-[#667085]">
-                <p>No recent requests to display</p>
-                <Link href="/app/submit" className="mt-3 inline-flex items-center rounded-full bg-[#101114] px-5 py-2 text-sm font-bold text-white transition hover:bg-[#ff5b12]">
-                  Submit your first request →
-                </Link>
-              </div>
-            </div>
-
-            {/* Right: Network Status */}
-            <div className="space-y-6">
-              <div className="assist-card rounded-[24px] p-6">
-                <h3 className="text-lg font-semibold text-[#111827] mb-4">Network Status</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#64748B]">Status</span>
-                    <span className="flex items-center gap-2 text-sm font-medium text-[#16A34A]">
-                      <span className="w-2 h-2 rounded-full bg-[#16A34A]"></span>
-                      Operational
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#64748B]">Validators</span>
-                    <span className="text-sm font-medium text-[#111827]">5/5 Online</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#64748B]">Avg Response</span>
-                    <span className="text-sm font-medium text-[#111827]">~2.3s</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="assist-card rounded-[24px] p-6">
-                <h3 className="text-lg font-semibold text-[#111827] mb-4">Quick Actions</h3>
-                <div className="space-y-3">
-                  <Link href="/app/submit" className="assist-btn-primary block w-full rounded-full px-4 py-3 text-center font-bold transition-all duration-200">
-                    Submit Content
-                  </Link>
-                  <Link href="/app/review" className="assist-btn-secondary block w-full rounded-full px-4 py-3 text-center font-semibold transition-all duration-200">
-                    Review Queue
-                  </Link>
-                  <Link href="/app/analytics" className="assist-btn-secondary block w-full rounded-full px-4 py-3 text-center font-semibold transition-all duration-200">
-                    View Analytics
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-    </AppShell>
-  )
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="assist-card rounded-[24px] p-5 transition duration-200 hover:-translate-y-0.5">
-      <p className="mb-2 text-sm font-semibold text-[#667085]">{label}</p>
-      <p className="text-3xl font-extrabold tracking-normal text-[#101114]">{value}</p>
+export default function Dashboard() {
+  const [state, setState] = useState<SystemState | null>(null)
+  const [recent, setRecent] = useState<Submission[]>([])
+  const [error, setError] = useState('')
+  useEffect(() => { (async () => { try { const client = getGenLayerClient(); setState(await client.getSystemState()); setRecent((await client.getSubmissions()).slice(0, 3)) } catch (e) { setError(e instanceof Error ? e.message : 'Contract read failed') } })() }, [])
+  return <AppShell title="Moderation Bond Desk" subtitle="Live contract state, authenticated submissions, and fund-backed outcomes.">
+    {error && <div className="mb-5 rounded-[20px] bg-[#fff1eb] p-5 font-semibold text-[#b43d08]">{error}</div>}
+    <div className="mb-5 grid gap-4 md:grid-cols-4">{[['Requests', state?.submission_count], ['Open bond', state?.total_bonded], ['Refunded', state?.total_refunded], ['Slashed', state?.total_slashed]].map(([label, value], index) => <div key={label as string} className="assist-card rounded-[24px] p-5"><p className="text-sm font-semibold text-[#667085]">{label as string}</p><p className="mt-2 text-3xl font-extrabold text-[#101114]">{value === undefined ? '...' : index === 0 ? value.toString() : `${value.toString()} wei`}</p></div>)}</div>
+    <div className="grid gap-5 lg:grid-cols-[1.3fr_0.7fr]">
+      <section className="assist-card rounded-[26px] p-6"><div className="mb-5 flex items-center justify-between"><h2 className="text-lg font-bold">Recent requests</h2><Link href="/app/review" className="text-sm font-black text-[#ff5b12]">View queue</Link></div>{recent.length === 0 ? <p className="rounded-[20px] bg-[#f6f7f8] p-10 text-center text-sm text-[#667085]">The on-chain queue is empty.</p> : recent.map((item) => <Link href={`/app/request/${item.submission_id}`} key={item.submission_id.toString()} className="flex items-center justify-between gap-4 border-t border-[#eceff3] py-4"><div><p className="font-bold">Request #{item.submission_id.toString()}</p><p className="mt-1 line-clamp-1 text-sm text-[#667085]">{item.content}</p></div><span className="rounded-full bg-[#eef8fd] px-3 py-2 text-xs font-black text-[#0478ba]">{item.status.replaceAll('_', ' ')}</span></Link>)}</section>
+      <aside className="assist-card rounded-[26px] p-6"><h2 className="text-lg font-bold">Next action</h2><p className="mt-2 text-sm leading-6 text-[#667085]">Create one bonded request, wait for finalization, then evaluate it from its request page.</p><Link href="/app/submit" className="assist-btn-primary mt-6 block rounded-full px-5 py-4 text-center font-bold">Submit content</Link><div className="mt-6 rounded-[20px] bg-[#f6f7f8] p-4"><p className="text-xs font-black uppercase text-[#667085]">Treasury</p><p className="mt-2 break-all font-mono text-xs text-[#101114]">{state?.treasury || 'Reading...'}</p></div></aside>
     </div>
-  )
+  </AppShell>
 }

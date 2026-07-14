@@ -81,14 +81,9 @@ export function AppSidebar() {
 
         <Link
           href="/app/submit"
-          className="assist-btn-primary flex h-10 items-center gap-2 rounded-full px-2.5 pl-5 text-sm font-bold transition-all duration-200"
+          className="assist-btn-primary flex h-10 items-center rounded-full px-6 text-sm font-bold transition-all duration-200"
         >
           <span>New Moderation</span>
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#101114]">
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          </span>
         </Link>
       </div>
 

@@ -4,444 +4,312 @@ from genlayer import *
 import typing
 import json
 
-# Community Guidelines - immutable standards for content evaluation
-COMMUNITY_GUIDELINES = """{
-  "hate_speech": "Content promoting violence or discrimination against individuals/groups based on protected characteristics (race, religion, gender, sexual orientation, disability, etc.)",
-  "misinformation": "False or misleading information presented as fact, especially harmful health/safety/civic information, election fraud claims, etc.",
-  "explicit_content": "Sexually explicit material, nudity, graphic violence, or disturbing imagery",
-  "harassment": "Targeted abuse, threats, stalking, bullying, or personal attacks against individuals",
-  "spam": "Unsolicited promotional content, scams, phishing, repeated identical submissions, or artificial engagement",
-  "scoring_weights": {
-    "hate_speech": 30,
-    "misinformation": 25,
-    "explicit_content": 20,
-    "harassment": 15,
-    "spam": 10
-  },
-  "thresholds": {
-    "approved_min_score": 80,
-    "rejected_max_score": 50,
-    "high_risk_category": 40
-  }
-}"""
+
+@gl.evm.contract_interface
+class _Recipient:
+    class View:
+        pass
+
+    class Write:
+        pass
+
+
+GUIDELINES = "Hate speech, targeted harassment, explicit violence, dangerous misinformation, scams, phishing, and manipulative spam are prohibited. Context, quotation, journalism, education, and satire must be considered before restricting content."
 
 
 class ContentModeration(gl.Contract):
-    """
-    AI-powered Content Moderation System
-    Evaluates user submissions (text or image URLs) against community guidelines
-    Uses multi-validator consensus to ensure fair, unbiased decisions
-    """
-
-    # Storage declarations - ONLY allowed types
+    config: TreeMap[u256, str]
     submission_count: u256
-    content_guidelines_version: u256
+    settlement_count: u256
+    total_bonded: u256
+    total_refunded: u256
+    total_slashed: u256
 
-    # Submission data
     submission_types: TreeMap[u256, str]
     submission_contents: TreeMap[u256, str]
-    submission_submitter: TreeMap[u256, str]
-    submission_timestamp: TreeMap[u256, u256]
-
-    # AI Evaluation results
+    submission_submitters: TreeMap[u256, str]
+    submission_timestamps: TreeMap[u256, u256]
     submission_statuses: TreeMap[u256, str]
+    submission_bond_statuses: TreeMap[u256, str]
+    submission_bonds: TreeMap[u256, u256]
     submission_scores: TreeMap[u256, u256]
-    submission_category_scores: TreeMap[u256, str]  # JSON string of category scores
+    submission_category_scores: TreeMap[u256, str]
     submission_reasons: TreeMap[u256, str]
     submission_evaluated_at: TreeMap[u256, u256]
-
-    # Appeal tracking
-    submission_appeal_count: TreeMap[u256, u256]
+    submission_appeal_deadlines: TreeMap[u256, u256]
     submission_appeal_reasons: TreeMap[u256, str]
+    submission_appeal_evidence: TreeMap[u256, str]
+    submission_appealed: TreeMap[u256, u256]
 
-    # Audit log
-    moderation_log: DynArray[str]
+    settlement_submission_ids: TreeMap[u256, u256]
+    settlement_kinds: TreeMap[u256, str]
+    settlement_recipients: TreeMap[u256, str]
+    settlement_amounts: TreeMap[u256, u256]
 
     def __init__(self):
+        self.config[u256(0)] = gl.message.sender_address.as_hex
         self.submission_count = u256(0)
-        self.content_guidelines_version = u256(1)
-        # TreeMap and DynArray initialized on first write
+        self.settlement_count = u256(0)
+        self.total_bonded = u256(0)
+        self.total_refunded = u256(0)
+        self.total_slashed = u256(0)
 
-    @gl.public.view
-    def get_guidelines(self) -> str:
-        """Return current community guidelines"""
-        return COMMUNITY_GUIDELINES
+    def _valid_url(self, value: str) -> bool:
+        return value.startswith("https://") and len(value) <= 500
 
-    @gl.public.view
-    def get_submission(self, submission_id: u256) -> typing.Any:
-        """Get full submission details"""
-        if submission_id >= self.submission_count:
-            return {"error": "SUBMISSION_NOT_FOUND"}
+    def _parse_review(self, raw: str) -> typing.Any:
+        try:
+            data = json.loads(raw)
+            verdict = str(data.get("verdict", "NEEDS_REVIEW")).upper()
+            score = int(data.get("risk_score", 50))
+            category_scores = json.dumps(data.get("category_scores", {}), sort_keys=True, separators=(",", ":"))[:700]
+            reason = str(data.get("reason", "The jury returned no usable reason."))[:900]
+        except Exception:
+            return None
+        if verdict not in ("APPROVED", "REJECTED", "NEEDS_REVIEW"):
+            verdict = "NEEDS_REVIEW"
+        if score < 0:
+            score = 0
+        if score > 100:
+            score = 100
+        return (verdict, score, category_scores, reason)
 
-        return {
-            "id": submission_id,
-            "type": self.submission_types[submission_id],
-            "content": self.submission_contents[submission_id],
-            "submitter": self.submission_submitter[submission_id],
-            "timestamp": self.submission_timestamp[submission_id],
-            "status": self.submission_statuses[submission_id],
-            "score": self.submission_scores[submission_id],
-            "category_scores": self.submission_category_scores[submission_id],
-            "reason": self.submission_reasons[submission_id],
-            "evaluated_at": self.submission_evaluated_at[submission_id],
-            "appeal_count": self.submission_appeal_count[submission_id]
-        }
+    def _record_settlement(self, submission_id: u256, kind: str, recipient: str, amount: u256) -> u256:
+        settlement_id = self.settlement_count
+        self.settlement_submission_ids[settlement_id] = submission_id
+        self.settlement_kinds[settlement_id] = kind
+        self.settlement_recipients[settlement_id] = recipient
+        self.settlement_amounts[settlement_id] = amount
+        self.settlement_count = settlement_id + u256(1)
+        return settlement_id
 
-    @gl.public.view
-    def get_submissions_by_status(self, status: str) -> typing.Any:
-        """Get all submissions with given status"""
-        result = DynArray[u256]()
-        i = u256(0)
-        while i < self.submission_count:
-            if self.submission_statuses[i] == status:
-                result.append(i)
-            i = i + u256(1)
-        return result
+    @gl.public.write.payable
+    def submit(self, content: str, content_type: str) -> typing.Any:
+        normalized_type = content_type.upper()
+        if normalized_type != "TEXT" and normalized_type != "URL":
+            return "INVALID_CONTENT_TYPE"
+        if len(content) == 0 or len(content) > 4000:
+            return "INVALID_CONTENT"
+        if normalized_type == "URL" and not self._valid_url(content):
+            return "INVALID_CONTENT_URL"
+        bond = gl.message.value
+        if bond == u256(0):
+            return "MODERATION_BOND_REQUIRED"
 
-    @gl.public.write
-    def submit(self, content: str, content_type: str, submitter: str) -> u256:
-        """
-        Submit content for moderation
-        content_type: "text" or "image_url"
-        Returns submission_id
-        """
-        # Validation
-        if len(content) == 0:
-            return u256(0)  # Error code 0 means empty content
-
-        if content_type != "text" and content_type != "image_url":
-            return u256(1)  # Error code 1 means invalid type
-
-        if len(submitter) == 0:
-            return u256(2)  # Error code 2 means no submitter
-
-        # Create submission
         submission_id = self.submission_count
-
-        self.submission_types[submission_id] = content_type
+        self.submission_types[submission_id] = normalized_type
         self.submission_contents[submission_id] = content
-        self.submission_submitter[submission_id] = submitter
-        self.submission_timestamp[submission_id] = gl.get_block_timestamp()
+        self.submission_submitters[submission_id] = gl.message.sender_address.as_hex
+        self.submission_timestamps[submission_id] = gl.get_block_timestamp()
         self.submission_statuses[submission_id] = "PENDING"
+        self.submission_bond_statuses[submission_id] = "LOCKED"
+        self.submission_bonds[submission_id] = bond
         self.submission_scores[submission_id] = u256(0)
         self.submission_category_scores[submission_id] = "{}"
-        self.submission_reasons[submission_id] = ""
+        self.submission_reasons[submission_id] = "Waiting for GenLayer moderation."
         self.submission_evaluated_at[submission_id] = u256(0)
-        self.submission_appeal_count[submission_id] = u256(0)
-
+        self.submission_appeal_deadlines[submission_id] = u256(0)
+        self.submission_appeal_reasons[submission_id] = ""
+        self.submission_appeal_evidence[submission_id] = ""
+        self.submission_appealed[submission_id] = u256(0)
         self.submission_count = submission_id + u256(1)
-
-        # Log
-        log_entry = json.dumps({
-            "action": "SUBMIT",
-            "submission_id": int(submission_id),
-            "submitter": submitter,
-            "type": content_type
-        }, sort_keys=True, separators=(",", ":"))
-        self.moderation_log.append(log_entry)
-
-        return submission_id
+        self.total_bonded = self.total_bonded + bond
+        return str(submission_id)
 
     @gl.public.write
     def evaluate(self, submission_id: u256) -> typing.Any:
-        """
-        AI evaluation of content against community guidelines.
-        Uses multi-validator consensus to ensure deterministic output.
-        """
-        # Validation
         if submission_id >= self.submission_count:
-            return {"error": "INVALID_SUBMISSION_ID"}
-
-        current_status = self.submission_statuses[submission_id]
-        if current_status != "PENDING":
-            return {"error": "ALREADY_EVALUATED", "current_status": current_status}
+            return "SUBMISSION_NOT_FOUND"
+        if self.submission_statuses[submission_id] != "PENDING":
+            return "SUBMISSION_NOT_PENDING"
 
         content = self.submission_contents[submission_id]
         content_type = self.submission_types[submission_id]
-        guidelines = COMMUNITY_GUIDELINES
 
-        # Nondeterministic evaluation wrapped in semantic consensus.
-        # Validators compare the meaning of the verdict, not byte-identical JSON.
-        def run_evaluation() -> str:
-            """
-            This function runs on independent validator LLM nodes.
-            URL submissions fetch live web evidence on-chain before moderation.
-            """
-            # Build prompt based on content type
-            if content_type == "text":
-                content_section = f"Text Content:\n{content[:4000]}"
-            else:
+        def run_review() -> str:
+            if content_type == "URL":
                 try:
-                    rendered_page = gl.nondet.web.render(content)
-                    content_section = f"""Source URL:
-{content}
-
-Rendered web evidence:
-{str(rendered_page)[:6000]}"""
+                    evidence = gl.nondet.web.render(content, mode="html")[:4200]
                 except Exception:
-                    content_section = f"""Source URL:
-{content}
-
-Rendered web evidence:
-WEB_RENDER_FAILED"""
-
-            prompt = f"""You are a Community Content Moderator AI. Evaluate the following content against community guidelines.
-
-{content_section}
-
-Community Guidelines:
-{guidelines}
-
-Scoring Criteria (0-100 total):
-- Hate Speech: 0-30 points (weight: 30%)
-- Misinformation: 0-25 points (weight: 25%)
-- Explicit Content: 0-20 points (weight: 20%)
-- Harassment: 0-15 points (weight: 15%)
-- Spam: 0-10 points (weight: 10%)
-
-For each category:
-- 0-10: No violation
-- 11-25: Minor violation
-- 26-40: Moderate violation
-- 41-50: Severe violation
-- 51+: Critical violation
-
-Decision Thresholds:
-- APPROVED: Total score < 50 AND no category > 40
-- REJECTED: Total score >= 60 OR any category >= 50
-- NEEDS_REVIEW: Total score 50-59 AND all categories < 40
-
-IMPORTANT: Respond with ONLY a valid JSON object, no other text:
-{{
-  "verdict": "APPROVED|REJECTED|NEEDS_REVIEW",
-  "total_score": <0-100>,
-  "category_scores": {{
-    "hate_speech": <0-30>,
-    "misinformation": <0-25>,
-    "explicit_content": <0-20>,
-    "harassment": <0-15>,
-    "spam": <0-10>
-  }},
-  "reason": "Brief explanation of the decision, citing specific guideline violations if any"
-}}"""
-
-            result = gl.nondet.exec_prompt(prompt)
-            return result
-
-        moderation_principle = """Two moderation results are equivalent when they have the same substantive verdict
-(APPROVED, REJECTED, or NEEDS_REVIEW), materially similar category risk assessment, and a reason that cites the same
-core evidence or guideline concern. Ignore harmless differences in JSON key order, wording, capitalization, or exact
-sentence structure. Reject equivalence if one result approves content that the other rejects, if a high-risk category
-is materially different, or if one result relies on evidence the other does not mention."""
-
-        consensus_result = gl.eq_principle.prompt_comparative(run_evaluation, moderation_principle)
-
-        # Parse the deterministic JSON result
-        try:
-            result_data = json.loads(consensus_result)
-            verdict = result_data.get("verdict", "NEEDS_REVIEW")
-            total_score = int(result_data.get("total_score", 0))
-            category_scores = result_data.get("category_scores", {})
-            reason = result_data.get("reason", "No reason provided")
-
-            # Update storage
-            self.submission_statuses[submission_id] = verdict
-            self.submission_scores[submission_id] = u256(total_score)
-            self.submission_category_scores[submission_id] = json.dumps(
-                category_scores, sort_keys=True, separators=(",", ":")
-            )
-            self.submission_reasons[submission_id] = reason
-            self.submission_evaluated_at[submission_id] = gl.get_block_timestamp()
-
-            # Log
-            log_entry = json.dumps({
-                "action": "EVALUATE",
-                "submission_id": int(submission_id),
-                "verdict": verdict,
-                "score": total_score
-            }, sort_keys=True, separators=(",", ":"))
-            self.moderation_log.append(log_entry)
-
-            return {"verdict": verdict, "score": total_score, "reason": reason}
-
-        except json.JSONDecodeError as e:
-            # Handle malformed JSON from LLM
-            error_verdict = "NEEDS_REVIEW"
-            self.submission_statuses[submission_id] = error_verdict
-            self.submission_reasons[submission_id] = f"Evaluation error: AI returned invalid JSON"
-            self.submission_evaluated_at[submission_id] = gl.get_block_timestamp()
-
-            return {"error": "INVALID_AI_RESPONSE", "verdict": error_verdict}
-
-    @gl.public.write
-    def appeal(self, submission_id: u256, appeal_reason: str) -> str:
-        """
-        Appeal a moderation decision.
-        Increases appeal count and re-evaluates with stricter criteria.
-        """
-        # Validation
-        if submission_id >= self.submission_count:
-            return "INVALID_SUBMISSION_ID"
-
-        current_status = self.submission_statuses[submission_id]
-        if current_status == "PENDING":
-            return "NOT_YET_EVALUATED"
-
-        # Check appeal limit (max 2 appeals per submission)
-        appeal_count = self.submission_appeal_count[submission_id]
-        if appeal_count >= u256(2):
-            return "APPEAL_LIMIT_REACHED"
-
-        # Record appeal
-        self.submission_appeal_count[submission_id] = appeal_count + u256(1)
-        current_appeal_reasons = self.submission_appeal_reasons[submission_id]
-        if len(current_appeal_reasons) > 0:
-            self.submission_appeal_reasons[submission_id] = current_appeal_reasons + " | " + appeal_reason
-        else:
-            self.submission_appeal_reasons[submission_id] = appeal_reason
-
-        # Re-evaluate with stricter prompt and fresh web evidence when needed.
-        content = self.submission_contents[submission_id]
-        content_type = self.submission_types[submission_id]
-        guidelines = COMMUNITY_GUIDELINES
-
-        def run_appeal_evaluation() -> str:
-            """
-            Appeal evaluation with human oversight flag.
-            Second evaluation must justify deviation from first.
-            """
-            if content_type == "text":
-                content_section = f"Text Content:\n{content[:4000]}"
+                    return json.dumps({"verdict":"NEEDS_REVIEW","risk_score":50,"category_scores":{},"reason":"The public URL could not be rendered, so no final restriction is justified."}, sort_keys=True, separators=(",", ":"))
             else:
-                try:
-                    rendered_page = gl.nondet.web.render(content)
-                    content_section = f"""Source URL:
-{content}
-
-Rendered web evidence:
-{str(rendered_page)[:6000]}"""
-                except Exception:
-                    content_section = f"""Source URL:
-{content}
-
-Rendered web evidence:
-WEB_RENDER_FAILED"""
-
-            prompt = f"""You are a Senior Content Moderator reviewing an appeal.
-This content was previously evaluated with verdict: {current_status}
-Appeal reason from submitter: {appeal_reason}
-
-{content_section}
-
-Community Guidelines:
-{guidelines}
-
-APPEAL REVIEW PROTOCOL:
-1. Re-evaluate all categories thoroughly
-2. Consider context that may have been missed
-3. Pay special attention to the appeal reason
-4. Only overturn original decision if there is clear evidence of error
-
-Scoring same as original evaluation.
-
-Respond with ONLY JSON:
-{{
-  "verdict": "APPROVED|REJECTED|NEEDS_REVIEW",
-  "total_score": <0-100>,
-  "category_scores": {{
-    "hate_speech": <0-30>,
-    "misinformation": <0-25>,
-    "explicit_content": <0-20>,
-    "harassment": <0-15>,
-    "spam": <0-10>
-  }},
-  "reason": "Detailed justification for decision on appeal",
-  "overturned": true/false
-}}"""
-
+                evidence = content[:4000]
+            prompt = f"""You are an impartial GenLayer content moderation jury. A real GEN bond depends on this ruling.
+COMMUNITY POLICY: {GUIDELINES}
+CONTENT TYPE: {content_type}
+PUBLIC OR INLINE EVIDENCE: {evidence}
+Assess context and evidence, not isolated keywords. APPROVED means risk 0-35 with no material policy violation. REJECTED means risk 60-100 with a clear material violation. NEEDS_REVIEW means ambiguous context, unreadable evidence, or risk 36-59. Respond ONLY with JSON containing verdict APPROVED|REJECTED|NEEDS_REVIEW, risk_score 0-100, category_scores as an object with hate_speech, misinformation, explicit_content, harassment, and spam values 0-100, and one concise evidence-based reason."""
             return gl.nondet.exec_prompt(prompt)
 
-        appeal_principle = """Two appeal results are equivalent when they reach the same appeal outcome and same
-substantive moderation verdict, with materially similar reasoning about whether the appeal evidence changes the prior
-decision. Ignore JSON formatting and phrasing differences. Reject equivalence if one result overturns the prior decision
-and the other does not, or if they disagree on the safety verdict."""
+        principle = "Validators must agree on the fund-controlling moderation outcome and a compatible risk band. Wording and exact category values may differ, but APPROVED, REJECTED, and NEEDS_REVIEW are not equivalent. The reason must rely on compatible evidence and policy concerns."
+        parsed = self._parse_review(gl.eq_principle.prompt_comparative(run_review, principle))
+        if parsed is None:
+            return "INVALID_AI_RESPONSE"
+        verdict, score_value, category_scores, reason = parsed
+        score = u256(score_value)
+        if verdict == "APPROVED" and score <= u256(35):
+            status = "APPROVED"
+        elif verdict == "REJECTED" and score >= u256(60):
+            status = "REJECTED_APPEALABLE"
+        else:
+            status = "NEEDS_REVIEW"
 
-        consensus_result = gl.eq_principle.prompt_comparative(run_appeal_evaluation, appeal_principle)
+        self.submission_statuses[submission_id] = status
+        self.submission_scores[submission_id] = score
+        self.submission_category_scores[submission_id] = category_scores
+        self.submission_reasons[submission_id] = reason
+        self.submission_evaluated_at[submission_id] = gl.get_block_timestamp()
+        if status == "REJECTED_APPEALABLE":
+            self.submission_appeal_deadlines[submission_id] = gl.get_block_timestamp() + u256(86400)
+        return self.get_submission(submission_id)
 
-        try:
-            result_data = json.loads(consensus_result)
-            new_verdict = result_data.get("verdict", "NEEDS_REVIEW")
-            total_score = int(result_data.get("total_score", 0))
+    @gl.public.write
+    def open_appeal(self, submission_id: u256, reason: str, evidence_url: str) -> typing.Any:
+        if submission_id >= self.submission_count:
+            return "SUBMISSION_NOT_FOUND"
+        if self.submission_submitters[submission_id] != gl.message.sender_address.as_hex:
+            return "NOT_SUBMITTER"
+        status = self.submission_statuses[submission_id]
+        if status != "REJECTED_APPEALABLE" and status != "NEEDS_REVIEW":
+            return "SUBMISSION_NOT_APPEALABLE"
+        if self.submission_appealed[submission_id] != u256(0):
+            return "APPEAL_ALREADY_USED"
+        if len(reason) < 20 or len(reason) > 900:
+            return "INVALID_APPEAL_REASON"
+        if not self._valid_url(evidence_url):
+            return "INVALID_APPEAL_EVIDENCE"
+        if status == "REJECTED_APPEALABLE" and gl.get_block_timestamp() > self.submission_appeal_deadlines[submission_id]:
+            return "APPEAL_WINDOW_CLOSED"
 
-            # Update submission with appeal result
-            self.submission_statuses[submission_id] = new_verdict
-            self.submission_scores[submission_id] = u256(total_score)
-            self.submission_category_scores[submission_id] = json.dumps(
-                result_data.get("category_scores", {}),
-                sort_keys=True, separators=(",", ":")
-            )
-            self.submission_reasons[submission_id] = f"[APPEAL #{int(appeal_count)+1}] " + result_data.get("reason", "")
-            self.submission_evaluated_at[submission_id] = gl.get_block_timestamp()
+        self.submission_appeal_reasons[submission_id] = reason
+        self.submission_appeal_evidence[submission_id] = evidence_url
+        self.submission_appealed[submission_id] = u256(1)
+        self.submission_statuses[submission_id] = "APPEAL_PENDING"
+        return "APPEAL_OPENED"
 
-            log_entry = json.dumps({
-                "action": "APPEAL",
-                "submission_id": int(submission_id),
-                "new_verdict": new_verdict,
-                "appeal_number": int(appeal_count) + 1
-            }, sort_keys=True, separators=(",", ":"))
-            self.moderation_log.append(log_entry)
+    @gl.public.write
+    def resolve_appeal(self, submission_id: u256) -> typing.Any:
+        if submission_id >= self.submission_count:
+            return "SUBMISSION_NOT_FOUND"
+        if self.submission_statuses[submission_id] != "APPEAL_PENDING":
+            return "APPEAL_NOT_PENDING"
 
-            return new_verdict
+        content = self.submission_contents[submission_id]
+        content_type = self.submission_types[submission_id]
+        prior_reason = self.submission_reasons[submission_id]
+        appeal_reason = self.submission_appeal_reasons[submission_id]
+        appeal_url = self.submission_appeal_evidence[submission_id]
 
-        except json.JSONDecodeError:
-            return "APPEAL_EVALUATION_ERROR"
+        def run_appeal() -> str:
+            try:
+                appeal_evidence = gl.nondet.web.render(appeal_url, mode="html")[:3200]
+                if content_type == "URL":
+                    original_evidence = gl.nondet.web.render(content, mode="html")[:2800]
+                else:
+                    original_evidence = content[:2800]
+            except Exception:
+                return json.dumps({"verdict":"NEEDS_REVIEW","risk_score":50,"category_scores":{},"reason":"The complete appeal record could not be rendered, so the bond should not be slashed."}, sort_keys=True, separators=(",", ":"))
+            prompt = f"""You are the senior GenLayer appeal jury. A real GEN bond depends on this final review.
+POLICY: {GUIDELINES}
+ORIGINAL EVIDENCE: {original_evidence}
+PRIOR JURY REASON: {prior_reason}
+SUBMITTER APPEAL: {appeal_reason}
+NEW PUBLIC EVIDENCE: {appeal_evidence}
+Reconsider the complete record. APPROVED requires risk 0-35, REJECTED requires risk 60-100 and a clear material violation, and NEEDS_REVIEW covers unresolved ambiguity. Respond ONLY with JSON containing verdict, risk_score, category_scores, and one concise reason."""
+            return gl.nondet.exec_prompt(prompt)
+
+        principle = "Appeal validators must agree on the same final bond outcome and compatible risk band after considering both original and new public evidence. Different wording is acceptable; disagreement between approval, rejection, and unresolved review is not."
+        parsed = self._parse_review(gl.eq_principle.prompt_comparative(run_appeal, principle))
+        if parsed is None:
+            return "INVALID_AI_RESPONSE"
+        verdict, score_value, category_scores, reason = parsed
+        score = u256(score_value)
+        if verdict == "APPROVED" and score <= u256(35):
+            status = "FINAL_APPROVED"
+        elif verdict == "REJECTED" and score >= u256(60):
+            status = "FINAL_REJECTED"
+        else:
+            status = "MANUAL_REVIEW"
+        self.submission_statuses[submission_id] = status
+        self.submission_scores[submission_id] = score
+        self.submission_category_scores[submission_id] = category_scores
+        self.submission_reasons[submission_id] = reason
+        self.submission_evaluated_at[submission_id] = gl.get_block_timestamp()
+        return self.get_submission(submission_id)
+
+    @gl.public.write
+    def accept_rejection(self, submission_id: u256) -> typing.Any:
+        if submission_id >= self.submission_count:
+            return "SUBMISSION_NOT_FOUND"
+        if self.submission_submitters[submission_id] != gl.message.sender_address.as_hex:
+            return "NOT_SUBMITTER"
+        if self.submission_statuses[submission_id] != "REJECTED_APPEALABLE":
+            return "REJECTION_NOT_OPEN"
+        self.submission_statuses[submission_id] = "FINAL_REJECTED"
+        return "REJECTION_ACCEPTED"
+
+    @gl.public.write
+    def claim_bond(self, submission_id: u256) -> typing.Any:
+        if submission_id >= self.submission_count:
+            return "SUBMISSION_NOT_FOUND"
+        submitter = self.submission_submitters[submission_id]
+        if submitter != gl.message.sender_address.as_hex:
+            return "NOT_SUBMITTER"
+        status = self.submission_statuses[submission_id]
+        if status != "APPROVED" and status != "FINAL_APPROVED" and status != "MANUAL_REVIEW":
+            return "BOND_NOT_REFUNDABLE"
+        if self.submission_bond_statuses[submission_id] != "LOCKED":
+            return "BOND_ALREADY_SETTLED"
+        amount = self.submission_bonds[submission_id]
+        if amount == u256(0) or amount > self.total_bonded:
+            return "INVALID_BOND_BALANCE"
+        self.submission_bond_statuses[submission_id] = "REFUNDED"
+        self.total_bonded = self.total_bonded - amount
+        self.total_refunded = self.total_refunded + amount
+        settlement_id = self._record_settlement(submission_id, "BOND_REFUND", submitter, amount)
+        _Recipient(Address(submitter)).emit_transfer(value=amount)
+        return str(settlement_id)
+
+    @gl.public.write
+    def slash_bond(self, submission_id: u256) -> typing.Any:
+        if submission_id >= self.submission_count:
+            return "SUBMISSION_NOT_FOUND"
+        status = self.submission_statuses[submission_id]
+        if status == "REJECTED_APPEALABLE":
+            if gl.get_block_timestamp() <= self.submission_appeal_deadlines[submission_id]:
+                return "APPEAL_WINDOW_OPEN"
+            self.submission_statuses[submission_id] = "FINAL_REJECTED"
+        elif status != "FINAL_REJECTED":
+            return "BOND_NOT_SLASHABLE"
+        if self.submission_bond_statuses[submission_id] != "LOCKED":
+            return "BOND_ALREADY_SETTLED"
+        amount = self.submission_bonds[submission_id]
+        if amount == u256(0) or amount > self.total_bonded:
+            return "INVALID_BOND_BALANCE"
+        treasury = self.config[u256(0)]
+        self.submission_bond_statuses[submission_id] = "SLASHED"
+        self.total_bonded = self.total_bonded - amount
+        self.total_slashed = self.total_slashed + amount
+        settlement_id = self._record_settlement(submission_id, "BOND_SLASH", treasury, amount)
+        _Recipient(Address(treasury)).emit_transfer(value=amount)
+        return str(settlement_id)
 
     @gl.public.view
-    def get_stats(self) -> typing.Any:
-        """Get moderation statistics"""
-        total = int(self.submission_count)
-        approved = 0
-        rejected = 0
-        needs_review = 0
-        pending = 0
-        appealed = 0
-
-        i = u256(0)
-        while i < self.submission_count:
-            status = self.submission_statuses[i]
-            if status == "APPROVED":
-                approved += 1
-            elif status == "REJECTED":
-                rejected += 1
-            elif status == "NEEDS_REVIEW":
-                needs_review += 1
-            else:
-                pending += 1
-
-            if self.submission_appeal_count[i] > u256(0):
-                appealed += 1
-
-            i = i + u256(1)
-
-        return {
-            "total_submissions": total,
-            "approved": approved,
-            "rejected": rejected,
-            "needs_review": needs_review,
-            "pending": pending,
-            "appealed": appealed,
-            "approval_rate": round(approved / total * 100, 2) if total > 0 else 0
-        }
+    def get_guidelines(self) -> str:
+        return json.dumps({"appeal_window_seconds":"86400","policy":GUIDELINES,"risk_approved_max":"35","risk_rejected_min":"60"}, sort_keys=True, separators=(",", ":"))
 
     @gl.public.view
-    def get_logs(self, start_index: u256, count: u256) -> DynArray[str]:
-        """Get moderation log entries"""
-        logs = DynArray[str]()
-        i = start_index
-        end = min(start_index + count, u256(len(self.moderation_log)))
+    def get_system_state(self) -> str:
+        return json.dumps({"settlement_count":str(self.settlement_count),"submission_count":str(self.submission_count),"total_bonded":str(self.total_bonded),"total_refunded":str(self.total_refunded),"total_slashed":str(self.total_slashed),"treasury":self.config[u256(0)]}, sort_keys=True, separators=(",", ":"))
 
-        while i < end:
-            logs.append(self.moderation_log[i])
-            i = i + u256(1)
+    @gl.public.view
+    def get_submission(self, submission_id: u256) -> str:
+        if submission_id >= self.submission_count:
+            return json.dumps({"error":"SUBMISSION_NOT_FOUND"}, sort_keys=True, separators=(",", ":"))
+        return json.dumps({"appeal_deadline":str(self.submission_appeal_deadlines[submission_id]),"appeal_evidence":self.submission_appeal_evidence[submission_id],"appeal_reason":self.submission_appeal_reasons[submission_id],"appealed":str(self.submission_appealed[submission_id]),"bond":str(self.submission_bonds[submission_id]),"bond_status":self.submission_bond_statuses[submission_id],"category_scores":self.submission_category_scores[submission_id],"content":self.submission_contents[submission_id],"evaluated_at":str(self.submission_evaluated_at[submission_id]),"reason":self.submission_reasons[submission_id],"score":str(self.submission_scores[submission_id]),"status":self.submission_statuses[submission_id],"submission_id":str(submission_id),"submitter":self.submission_submitters[submission_id],"timestamp":str(self.submission_timestamps[submission_id]),"type":self.submission_types[submission_id]}, sort_keys=True, separators=(",", ":"))
 
-        return logs
+    @gl.public.view
+    def get_settlement(self, settlement_id: u256) -> str:
+        if settlement_id >= self.settlement_count:
+            return json.dumps({"error":"SETTLEMENT_NOT_FOUND"}, sort_keys=True, separators=(",", ":"))
+        return json.dumps({"amount":str(self.settlement_amounts[settlement_id]),"kind":self.settlement_kinds[settlement_id],"recipient":self.settlement_recipients[settlement_id],"settlement_id":str(settlement_id),"submission_id":str(self.settlement_submission_ids[settlement_id])}, sort_keys=True, separators=(",", ":"))

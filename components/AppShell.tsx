@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { AppSidebar } from './AppSidebar'
 import { getContractConfig, getGenLayerClient } from '@/lib/genlayer-client'
 
@@ -12,6 +14,7 @@ interface AppShellProps {
 
 export function AppShell({ children, title, subtitle }: AppShellProps) {
   const config = useMemo(() => getContractConfig(), [])
+  const pathname = usePathname()
   const [wallet, setWallet] = useState('')
   const [walletStatus, setWalletStatus] = useState(config.address ? 'Contract configured' : 'Missing contract address')
 
@@ -48,6 +51,16 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
     }
   }
 
+  async function handleSyncContract() {
+    try {
+      setWalletStatus('Reading contract state...')
+      const state = await getGenLayerClient().getSystemState()
+      setWalletStatus(`Synced: ${state.submission_count.toString()} submissions`)
+    } catch (error) {
+      setWalletStatus(error instanceof Error ? error.message : 'Contract sync failed')
+    }
+  }
+
   const shortAddress = (value: string) => value ? `${value.slice(0, 6)}...${value.slice(-4)}` : 'Not set'
 
   return (
@@ -56,6 +69,11 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
       <AppSidebar />
       <div className="relative z-10 mx-auto max-w-[1180px] px-4 pb-10 pt-6 md:px-8 md:pt-8">
         <section className="mb-7 text-center text-white">
+          {pathname !== '/app' && (
+            <Link href="/app" aria-label="Back to overview" className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#101114] shadow-sm transition hover:-translate-y-0.5 hover:text-[#ff5b12]">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            </Link>
+          )}
           <p className="mb-3 text-sm font-semibold text-white/85">AI-powered content moderation</p>
           <h1 className="mx-auto max-w-3xl text-4xl font-extrabold leading-tight tracking-normal md:text-6xl">{title}</h1>
           {subtitle && <p className="mx-auto mt-3 max-w-2xl text-base font-semibold text-white/86">{subtitle}</p>}
@@ -79,6 +97,13 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
                 </div>
                 <p className="mt-0.5 text-sm font-bold text-[#101114]">Contract {shortAddress(config.address)}</p>
               </div>
+              <button
+                type="button"
+                onClick={handleSyncContract}
+                className="flex h-12 items-center justify-center rounded-full border border-[#e7eaee] bg-white px-5 text-sm font-bold text-[#101114] transition hover:border-[#20a7ee]"
+              >
+                Sync contract
+              </button>
               <button
                 type="button"
                 onClick={handleConnectWallet}

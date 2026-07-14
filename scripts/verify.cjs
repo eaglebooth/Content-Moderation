@@ -143,12 +143,12 @@ function checkFrontendIntegration() {
     return false
   }
 
-  if (!content.includes('toRlp') || !content.includes('readContract')) {
-    console.error('FAIL Frontend does not use GenLayer RLP contract calls')
+  if (!content.includes("from 'genlayer-js/chains'") || !content.includes('studionet') || !content.includes('writeContract') || !content.includes('readContract')) {
+    console.error('FAIL Frontend does not use native genlayer-js Studio calls')
     return false
   }
 
-  console.log('OK Frontend uses genlayer-js/RLP contract calls')
+  console.log('OK Frontend uses native genlayer-js Studio calls')
   return true
 }
 

@@ -1,216 +1,29 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { getGenLayerClient, Submission } from '@/lib/genlayer-client'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { AppShell } from '@/components/AppShell'
+import { getContractConfig, getGenLayerClient, type Submission } from '@/lib/genlayer-client'
 
-export default function RequestDetailPage({ params }: { params: { id: string } }) {
-  const [submission, setSubmission] = useState<Submission | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    loadSubmission()
-  }, [params.id])
-
-  const loadSubmission = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const client = getGenLayerClient()
-      await client.initialize()
-      const data = await client.getSubmission(BigInt(params.id))
-      setSubmission(data)
-    } catch (err: any) {
-      setError(err.message || 'Failed to load submission')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const getStatusConfig = (status: string) => {
-    switch (status) {
-      case 'APPROVED':
-        return { label: 'APPROVED', bg: 'bg-[#DCFCE7]', text: 'text-[#16A34A]', border: 'border-[#BBF7D0]' }
-      case 'REJECTED':
-        return { label: 'REJECTED', bg: 'bg-[#FEE2E2]', text: 'text-[#EF4444]', border: 'border-[#FECACA]' }
-      case 'NEEDS_REVIEW':
-        return { label: 'NEEDS REVIEW', bg: 'bg-[#FEF3C7]', text: 'text-[#D97706]', border: 'border-[#FDE68A]' }
-      default:
-        return { label: 'PENDING', bg: 'bg-[#F1F5F9]', text: 'text-[#64748B]', border: 'border-[#E2E8F0]' }
-    }
-  }
-
-  const parseCategoryScores = () => {
-    if (!submission?.category_scores) return []
-    try {
-      const parsed = JSON.parse(submission.category_scores)
-      return Object.entries(parsed).map(([category, score]) => ({ category, score: Number(score) }))
-    } catch {
-      return []
-    }
-  }
-
-  if (loading) {
-    return (
-      <AppShell title={`Request #${params.id}`} subtitle="Loading moderation result...">
-        <div className="flex items-center justify-center py-20">
-          <div className="h-12 w-12 animate-spin rounded-full border-2 border-[#ff5b12] border-t-transparent"></div>
-        </div>
-      </AppShell>
-    )
-  }
-
-  if (error || !submission) {
-    return (
-      <AppShell title={`Request #${params.id}`} subtitle="Error loading request">
-        <div className="text-center py-20">
-          <p className="text-[#EF4444] mb-4">{error || 'Submission not found'}</p>
-          <Link href="/app/review" className="font-medium text-[#101114] hover:underline">
-            ← Back to Review Queue
-          </Link>
-        </div>
-      </AppShell>
-    )
-  }
-
-  const statusConfig = getStatusConfig(submission.status)
-  const categoryScores = parseCategoryScores()
-
-  return (
-    <AppShell title={`Request #${params.id}`} subtitle={`Submitted on ${new Date(Number(submission.timestamp) * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`}>
-      {/* Back button */}
-      <div className="mb-6">
-        <Link href="/app/review" className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-[#101114] shadow-sm transition-colors hover:text-[#ff5b12]">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to Review Queue
-        </Link>
+export default function RequestPage({ params }: { params: { id: string } }) {
+  const [item, setItem] = useState<Submission | null>(null)
+  const [error, setError] = useState('')
+  useEffect(() => { getGenLayerClient().getSubmission(params.id).then(setItem).catch((e) => setError(e instanceof Error ? e.message : 'Read failed')) }, [params.id])
+  const scores = (() => { try { return Object.entries(JSON.parse(item?.category_scores || '{}')) } catch { return [] } })()
+  const config = getContractConfig()
+  return <AppShell title={`Request #${params.id}`} subtitle="One on-chain record, with each transaction isolated on its own page.">
+    {!item ? <div className="assist-card rounded-[26px] p-12 text-center text-[#667085]">{error || 'Reading contract state...'}</div> : <div className="space-y-5">
+      <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
+        <section className="assist-card rounded-[26px] p-6 md:p-8"><div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-[#101114] px-4 py-2 text-xs font-black text-white">{item.status.replaceAll('_', ' ')}</span><span className="rounded-full bg-[#eef8fd] px-4 py-2 text-xs font-black text-[#0478ba]">BOND {item.bond_status}</span></div><p className="mt-7 text-xs font-black uppercase text-[#667085]">{item.type} evidence</p><p className="mt-3 whitespace-pre-wrap break-words text-base leading-7 text-[#101114]">{item.content}</p>{item.reason && <div className="mt-7 rounded-[22px] bg-[#f6f7f8] p-5"><p className="text-xs font-black uppercase text-[#ff5b12]">Jury reason</p><p className="mt-3 text-sm leading-6 text-[#334155]">{item.reason}</p></div>}</section>
+        <aside className="space-y-4"><div className="assist-card rounded-[26px] p-6"><p className="text-sm font-bold text-[#667085]">Risk score</p><p className="mt-2 text-6xl font-black text-[#101114]">{item.score.toString()}</p><div className="mt-5 h-2 overflow-hidden rounded-full bg-[#eef1f4]"><div className="h-full bg-[#ff5b12]" style={{ width: `${Math.min(100, Number(item.score))}%` }} /></div></div><div className="assist-card rounded-[26px] p-6"><p className="text-xs font-black uppercase text-[#667085]">Bond</p><p className="mt-2 text-2xl font-black">{item.bond.toString()} wei</p><p className="mt-2 text-sm text-[#667085]">Owner {item.submitter.slice(0, 8)}...{item.submitter.slice(-6)}</p></div></aside>
       </div>
+      {scores.length > 0 && <section className="assist-card rounded-[26px] p-6 md:p-8"><h2 className="text-lg font-bold">Category evidence</h2><div className="mt-5 grid gap-3 md:grid-cols-5">{scores.map(([name, value]) => <div key={name} className="rounded-[18px] bg-[#f6f7f8] p-4"><p className="text-xs font-bold text-[#667085]">{name.replaceAll('_', ' ')}</p><p className="mt-2 text-2xl font-black">{String(value)}</p></div>)}</div></section>}
+      <section className="grid gap-4 md:grid-cols-3"><Action href={`/app/evaluate/${params.id}`} title="Evaluate" copy="Run GenLayer jury consensus for a pending request." enabled={item.status === 'PENDING'} /><Action href={`/app/appeal/${params.id}`} title="Appeal" copy="Add a reason and new public evidence." enabled={item.status === 'REJECTED_APPEALABLE' || item.status === 'NEEDS_REVIEW' || item.status === 'APPEAL_PENDING'} /><Action href={`/app/settle/${params.id}`} title="Settle bond" copy="Refund or slash GEN after a final outcome." enabled={item.bond_status === 'LOCKED' && item.status !== 'PENDING'} /></section>
+      <section className="assist-card rounded-[26px] p-6"><p className="text-xs font-black uppercase text-[#667085]">Connected contract</p><p className="mt-2 break-all font-mono text-sm">{config.address || 'Not configured'}</p><p className="mt-2 text-sm font-bold text-[#0478ba]">{config.network}</p></section>
+    </div>}
+  </AppShell>
+}
 
-      {/* Status and Score */}
-      <div className="mb-5 grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="assist-card rounded-[26px] p-6 md:p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <span className={`px-4 py-2 rounded-full text-sm font-semibold ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} border`}>
-              {statusConfig.label}
-            </span>
-            <span className="text-sm text-[#64748B]">Request #{submission.id.toString()}</span>
-          </div>
-
-          <h3 className="text-sm font-semibold text-[#64748B] mb-3">Content</h3>
-          <div className="rounded-2xl bg-[#F8FAFC] p-6 border border-[#E7EEF3]">
-            <p className="text-[#111827] whitespace-pre-wrap leading-relaxed">{submission.content}</p>
-          </div>
-
-          {submission.reason && (
-            <div className="mt-6">
-              <h3 className="text-sm font-semibold text-[#64748B] mb-3">AI Explanation</h3>
-              <div className="rounded-2xl bg-[#F8FAFC] p-6 border border-[#E7EEF3]">
-                <p className="text-[#111827] leading-relaxed">{submission.reason}</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-6">
-          <div className="assist-card rounded-[26px] p-8 text-center">
-            <p className="text-sm text-[#64748B] mb-2">Overall Score</p>
-            <p className={`text-6xl font-bold ${
-              Number(submission.score) >= 60 ? 'text-[#EF4444]' :
-              Number(submission.score) < 50 ? 'text-[#16A34A]' :
-              'text-[#F59E0B]'
-            }`}>
-              {Number(submission.score)}
-            </p>
-            <p className="text-sm text-[#64748B] mt-2">out of 100</p>
-          </div>
-
-          <div className="assist-card rounded-[24px] p-6">
-            <h3 className="text-sm font-semibold text-[#64748B] mb-4">Validator Consensus</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[#64748B]">Validators</span>
-                <span className="text-sm font-medium text-[#111827]">5/5</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[#64748B]">Agreement</span>
-                <span className="text-sm font-medium text-[#16A34A]">100%</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[#64748B]">Confidence</span>
-                <span className="text-sm font-medium text-[#111827]">94%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Category Risk Analysis */}
-      {categoryScores.length > 0 && (
-        <div className="assist-card mb-5 rounded-[26px] p-6 md:p-8">
-          <h3 className="text-lg font-semibold text-[#111827] mb-6">Category Risk Analysis</h3>
-          <div className="space-y-5">
-            {categoryScores.map(({ category, score }) => (
-              <div key={category}>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-[#64748B]">{category}</span>
-                  <span className={`font-semibold ${
-                    score >= 60 ? 'text-[#EF4444]' :
-                    score < 50 ? 'text-[#16A34A]' :
-                    'text-[#F59E0B]'
-                  }`}>{score}</span>
-                </div>
-                <div className="h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${Math.min(score, 100)}%`,
-                      background: score >= 60 ? '#EF4444' : score < 50 ? '#16A34A' : '#F59E0B'
-                    }}
-                  ></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* On-Chain Verification */}
-      <div className="assist-card rounded-[26px] p-6 md:p-8">
-        <h3 className="text-lg font-semibold text-[#111827] mb-4">On-Chain Verification</h3>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between py-3 border-b border-[#E7EEF3]">
-            <span className="text-sm text-[#64748B]">Contract Address</span>
-            <span className="text-sm font-mono text-[#111827]">0x3CEa...D13Ae</span>
-          </div>
-          <div className="flex items-center justify-between py-3 border-b border-[#E7EEF3]">
-            <span className="text-sm text-[#64748B]">Network</span>
-            <span className="text-sm font-medium text-[#111827]">GenLayer Testnet</span>
-          </div>
-          <div className="flex items-center justify-between py-3">
-            <span className="text-sm text-[#64748B]">Timestamp</span>
-            <span className="text-sm font-medium text-[#111827]">
-              {new Date(Number(submission.timestamp) * 1000).toLocaleString('en-US')}
-            </span>
-          </div>
-        </div>
-        <div className="mt-6">
-          <a
-            href="https://genlayer.com/explorer"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="assist-btn-secondary inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-200"
-          >
-            View on Explorer
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-          </a>
-        </div>
-      </div>
-    </AppShell>
-  )
+function Action({ href, title, copy, enabled }: { href: string; title: string; copy: string; enabled: boolean }) {
+  return enabled ? <Link href={href} className="assist-card rounded-[24px] p-6 transition hover:-translate-y-1"><h2 className="text-lg font-black">{title}</h2><p className="mt-2 text-sm leading-6 text-[#667085]">{copy}</p><p className="mt-5 text-sm font-black text-[#ff5b12]">Open step →</p></Link> : <div className="rounded-[24px] border border-[#eceff3] bg-white/50 p-6 opacity-55"><h2 className="text-lg font-black">{title}</h2><p className="mt-2 text-sm leading-6 text-[#667085]">Not available in the current state.</p></div>
 }
