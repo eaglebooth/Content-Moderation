@@ -9,6 +9,7 @@ const client = fs.readFileSync(path.join(root, 'lib/genlayer-client.ts'), 'utf-8
 const shell = fs.readFileSync(path.join(root, 'components/AppShell.tsx'), 'utf-8')
 const submitPage = fs.readFileSync(path.join(root, 'app/app/submit/page.tsx'), 'utf-8')
 const dashboard = fs.readFileSync(path.join(root, 'app/app/page.tsx'), 'utf-8')
+const evaluatePage = fs.readFileSync(path.join(root, 'app/app/evaluate/[id]/page.tsx'), 'utf-8')
 
 test('contract has the pinned Studio runtime header', () => {
   const lines = contract.split(/\r?\n/)
@@ -93,6 +94,13 @@ test('temporary Studionet rate limits are retried without duplicating dashboard 
   assert(client.includes('getSubmissions(knownState?: SystemState)'))
   assert(dashboard.includes('getSubmissions(liveState)'))
   assert(dashboard.includes('Reading the on-chain queue...'))
+})
+
+test('evaluation refreshes state and cannot be submitted twice from stale UI', () => {
+  assert(evaluatePage.includes("if (item?.status !== 'PENDING')"))
+  assert(evaluatePage.includes('const current = await load()'))
+  assert(evaluatePage.includes('This submission cannot be evaluated twice.'))
+  assert(evaluatePage.includes('Continue to settlement'))
 })
 
 test('reviewer contract overrides are verified before they are persisted', () => {
