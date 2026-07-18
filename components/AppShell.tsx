@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { AppSidebar } from './AppSidebar'
-import { getContractConfig, getGenLayerClient } from '@/lib/genlayer-client'
+import { getContractConfig, getGenLayerClient, restoreDefaultContractAddress, setActiveContractAddress } from '@/lib/genlayer-client'
 
 interface AppShellProps {
   children: React.ReactNode
@@ -13,13 +13,17 @@ interface AppShellProps {
 }
 
 export function AppShell({ children, title, subtitle }: AppShellProps) {
-  const config = useMemo(() => getContractConfig(), [])
   const pathname = usePathname()
+  const [config, setConfig] = useState(() => getContractConfig())
+  const [addressInput, setAddressInput] = useState(config.address)
   const [wallet, setWallet] = useState('')
   const [walletStatus, setWalletStatus] = useState(config.address ? 'Contract configured' : 'Missing contract address')
 
   useEffect(() => {
     try {
+      const current = getContractConfig()
+      setConfig(current)
+      setAddressInput(current.address)
       const client = getGenLayerClient()
       client.initialize().then(() => {
         const account = client.getConnectedAccount()
@@ -33,7 +37,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
     } catch (error) {
       setWalletStatus(error instanceof Error ? error.message : 'Contract not configured')
     }
-  }, [config.address])
+  }, [])
 
   async function handleConnectWallet() {
     try {
@@ -59,6 +63,25 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
     } catch (error) {
       setWalletStatus(error instanceof Error ? error.message : 'Contract sync failed')
     }
+  }
+
+  async function handleUseContract() {
+    try {
+      const address = setActiveContractAddress(addressInput)
+      setConfig(getContractConfig())
+      setWalletStatus('Reading selected contract...')
+      const state = await getGenLayerClient().getSystemState()
+      setWalletStatus(`Verified ${address.slice(0, 6)}...${address.slice(-4)}: ${state.submission_count.toString()} submissions`)
+    } catch (error) {
+      setWalletStatus(error instanceof Error ? error.message : 'Contract verification failed')
+    }
+  }
+
+  function handleRestoreContract() {
+    const address = restoreDefaultContractAddress()
+    setAddressInput(address)
+    setConfig(getContractConfig())
+    setWalletStatus('Production contract restored. Sync to verify it.')
   }
 
   const shortAddress = (value: string) => value ? `${value.slice(0, 6)}...${value.slice(-4)}` : 'Not set'
@@ -115,6 +138,19 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
                 {walletStatus}
               </div>
             </div>
+          </div>
+          <div className="mt-4 grid gap-2 border-t border-[#eceff3] pt-4 md:grid-cols-[1fr_auto_auto]">
+            <label className="sr-only" htmlFor="contract-address">Contract address</label>
+            <input
+              id="contract-address"
+              value={addressInput}
+              onChange={(event) => setAddressInput(event.target.value)}
+              spellCheck={false}
+              className="h-11 min-w-0 rounded-full border border-[#e7eaee] bg-[#f6f7f8] px-4 font-mono text-xs text-[#101114] outline-none transition focus:border-[#20a7ee]"
+              placeholder="0x... GenLayer contract address"
+            />
+            <button type="button" onClick={handleUseContract} className="h-11 rounded-full bg-[#0478ba] px-5 text-sm font-bold text-white transition hover:bg-[#101114]">Use &amp; verify</button>
+            <button type="button" onClick={handleRestoreContract} className="h-11 rounded-full border border-[#e7eaee] bg-white px-5 text-sm font-bold text-[#101114] transition hover:border-[#ff5b12]">Restore default</button>
           </div>
         </header>
           <main className="px-1 pb-1 md:px-2">{children}</main>

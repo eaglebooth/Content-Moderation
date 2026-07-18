@@ -40,6 +40,12 @@ test('contract exposes complete review and appeal lifecycle', () => {
   }
 })
 
+test('contract uses deterministic transaction time and no nonexistent block API', () => {
+  assert(contract.includes('gl.message_raw["datetime"]'))
+  assert(contract.includes('def _transaction_timestamp'))
+  assert(!contract.includes('gl.get_block_timestamp'))
+})
+
 test('public views return deterministic JSON strings', () => {
   assert(contract.includes('def get_system_state(self) -> str'))
   assert(contract.includes('def get_submission(self, submission_id: u256) -> str'))
@@ -52,4 +58,10 @@ test('frontend uses the GenLayer SDK and native Studio chain', () => {
   assert(client.includes("from 'genlayer-js/chains'"))
   assert(client.includes('studionet'))
   assert(client.includes('writeContract'))
+  assert(client.includes('TransactionStatus.ACCEPTED'))
+  assert(client.includes('getTransaction'))
+  assert(client.includes('stateEventuallyMatches'))
+  assert(client.includes('setActiveContractAddress'))
+  assert(client.includes('localStorage'))
+  assert(!client.includes('TransactionStatus.FINALIZED'))
 })

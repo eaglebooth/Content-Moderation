@@ -57,6 +57,27 @@ class ContentModeration(gl.Contract):
     def _valid_url(self, value: str) -> bool:
         return value.startswith("https://") and len(value) <= 500
 
+    def _transaction_timestamp(self) -> u256:
+        # GenVM pins this ISO datetime to the transaction, so every validator
+        # derives the same Unix timestamp without relying on block metadata.
+        raw = str(gl.message_raw["datetime"])
+        year = int(raw[0:4])
+        month = int(raw[5:7])
+        day = int(raw[8:10])
+        hour = int(raw[11:13])
+        minute = int(raw[14:16])
+        second = int(raw[17:19])
+
+        adjusted_year = year - (1 if month <= 2 else 0)
+        era = adjusted_year // 400
+        year_of_era = adjusted_year - era * 400
+        shifted_month = month - 3 if month > 2 else month + 9
+        day_of_year = (153 * shifted_month + 2) // 5 + day - 1
+        day_of_era = year_of_era * 365 + year_of_era // 4 - year_of_era // 100 + day_of_year
+        days_since_epoch = era * 146097 + day_of_era - 719468
+        seconds = days_since_epoch * 86400 + hour * 3600 + minute * 60 + second
+        return u256(seconds)
+
     def _parse_review(self, raw: str) -> typing.Any:
         try:
             data = json.loads(raw)
@@ -100,7 +121,7 @@ class ContentModeration(gl.Contract):
         self.submission_types[submission_id] = normalized_type
         self.submission_contents[submission_id] = content
         self.submission_submitters[submission_id] = gl.message.sender_address.as_hex
-        self.submission_timestamps[submission_id] = gl.get_block_timestamp()
+        self.submission_timestamps[submission_id] = self._transaction_timestamp()
         self.submission_statuses[submission_id] = "PENDING"
         self.submission_bond_statuses[submission_id] = "LOCKED"
         self.submission_bonds[submission_id] = bond
@@ -158,9 +179,10 @@ Assess context and evidence, not isolated keywords. APPROVED means risk 0-35 wit
         self.submission_scores[submission_id] = score
         self.submission_category_scores[submission_id] = category_scores
         self.submission_reasons[submission_id] = reason
-        self.submission_evaluated_at[submission_id] = gl.get_block_timestamp()
+        now = self._transaction_timestamp()
+        self.submission_evaluated_at[submission_id] = now
         if status == "REJECTED_APPEALABLE":
-            self.submission_appeal_deadlines[submission_id] = gl.get_block_timestamp() + u256(86400)
+            self.submission_appeal_deadlines[submission_id] = now + u256(86400)
         return self.get_submission(submission_id)
 
     @gl.public.write
@@ -178,7 +200,7 @@ Assess context and evidence, not isolated keywords. APPROVED means risk 0-35 wit
             return "INVALID_APPEAL_REASON"
         if not self._valid_url(evidence_url):
             return "INVALID_APPEAL_EVIDENCE"
-        if status == "REJECTED_APPEALABLE" and gl.get_block_timestamp() > self.submission_appeal_deadlines[submission_id]:
+        if status == "REJECTED_APPEALABLE" and self._transaction_timestamp() > self.submission_appeal_deadlines[submission_id]:
             return "APPEAL_WINDOW_CLOSED"
 
         self.submission_appeal_reasons[submission_id] = reason
@@ -234,7 +256,7 @@ Reconsider the complete record. APPROVED requires risk 0-35, REJECTED requires r
         self.submission_scores[submission_id] = score
         self.submission_category_scores[submission_id] = category_scores
         self.submission_reasons[submission_id] = reason
-        self.submission_evaluated_at[submission_id] = gl.get_block_timestamp()
+        self.submission_evaluated_at[submission_id] = self._transaction_timestamp()
         return self.get_submission(submission_id)
 
     @gl.public.write
@@ -276,7 +298,7 @@ Reconsider the complete record. APPROVED requires risk 0-35, REJECTED requires r
             return "SUBMISSION_NOT_FOUND"
         status = self.submission_statuses[submission_id]
         if status == "REJECTED_APPEALABLE":
-            if gl.get_block_timestamp() <= self.submission_appeal_deadlines[submission_id]:
+            if self._transaction_timestamp() <= self.submission_appeal_deadlines[submission_id]:
                 return "APPEAL_WINDOW_OPEN"
             self.submission_statuses[submission_id] = "FINAL_REJECTED"
         elif status != "FINAL_REJECTED":

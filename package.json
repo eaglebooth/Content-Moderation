@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "node --test tests/*.cjs",
+    "test:runtime": "node scripts/runtime-smoke.cjs",
     "verify": "node scripts/verify.cjs",
     "deploy": "node scripts/deploy.cjs"
   },

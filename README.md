@@ -8,8 +8,9 @@ Pitch: this protocol dies without GenLayer because real funds depend on a subjec
 
 - App: https://content-moderation-zeta.vercel.app/
 - Repository: https://github.com/eaglebooth/Content-Moderation
-- ContentModeration V2: `0x63D14f690a7590836d3a890AaDAbb5b63882D347`
+- ContentModeration V2: `0x991272C07158e7cC526233Dee29F765D75163461`
 - Network: GenLayer Studio (`studionet`)
+- Verified payable lifecycle: [`RELEASE_EVIDENCE.md`](RELEASE_EVIDENCE.md)
 
 ## Contract Lifecycle
 
@@ -34,7 +35,7 @@ The Next.js app preserves the existing blue, white, black, and orange visual sys
 - `/app/settle/[id]` settles the bond.
 - `/app/analytics` derives outcomes and ledger totals from contract state.
 
-The client uses `genlayer-js`, its native `studionet` chain, finalized transaction receipts, real wallet accounts, real payable values, and real view calls. No Solidity ABI or Ethereum-mainnet fallback is used.
+The client uses `genlayer-js`, its native `studionet` chain, accepted transaction receipts, real wallet accounts, real payable values, and real view calls. Every write verifies the expected on-chain state change, and missing Studionet receipt metadata is recovered with `getTransaction` instead of being reported as a false failure. No Solidity ABI or Ethereum-mainnet fallback is used.
 
 ## Local Verification
 
@@ -45,17 +46,27 @@ npm run verify
 npm run dev
 ```
 
+After deploying a fresh contract, exercise real payable custody, AI consensus, and refund settlement with a disposable funded wallet:
+
+```powershell
+$env:CONTRACT_ADDRESS="0x..."
+$env:PRIVATE_KEY="..."
+npm run test:runtime
+```
+
+The runtime script never prints the private key and the repository does not store it.
+
 Configure `.env.local` after redeployment:
 
 ```env
-NEXT_PUBLIC_CONTRACT_ADDRESS=0x63D14f690a7590836d3a890AaDAbb5b63882D347
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x991272C07158e7cC526233Dee29F765D75163461
 NEXT_PUBLIC_NETWORK=studionet
 NEXT_PUBLIC_GENLAYER_RPC=
 ```
 
 ## Deployment Handoff
 
-The deployed V2 address must be kept identical in local configuration, Vercel environment variables, and this README. Use **Sync Contract** before exercising write flows so a network or address mismatch is visible immediately.
+The deployed V2 address must be kept identical in local configuration, Vercel environment variables, and this README. Reviewers can also enter another deployed address at runtime with **Use & verify**; the selection is stored only in their browser and can be reset with **Restore default**. Use **Sync Contract** before exercising write flows so a network or address mismatch is visible immediately.
 
 ## Repository Structure
 
