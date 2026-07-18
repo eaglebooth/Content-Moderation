@@ -41,6 +41,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
 
   async function handleConnectWallet() {
     try {
+      setWalletStatus('Opening wallet and switching to Studionet...')
       const client = getGenLayerClient()
       await client.initialize()
       const connected = await client.connectWallet()
@@ -134,7 +135,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
               >
                 {wallet ? shortAddress(wallet) : 'Connect wallet'}
               </button>
-              <div className="hidden max-w-[180px] text-xs font-semibold text-[#667085] lg:block">
+              <div role="status" aria-live="polite" className="max-w-[240px] break-words text-xs font-semibold leading-5 text-[#667085]">
                 {walletStatus}
               </div>
             </div>

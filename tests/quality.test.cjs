@@ -78,6 +78,14 @@ test('frontend uses the GenLayer SDK and native Studio chain', () => {
   assert(!client.includes('TransactionStatus.FINALIZED'))
 })
 
+test('wallet connection switches to Studionet and exposes connection feedback', () => {
+  assert(client.includes('await walletClient.connect(network)'))
+  assert(client.includes('MetaMask or a GenLayer-compatible wallet'))
+  assert(shell.includes("Opening wallet and switching to Studionet..."))
+  assert(shell.includes('aria-live="polite"'))
+  assert(!shell.includes('hidden max-w-[180px]'))
+})
+
 test('reviewer contract overrides are verified before they are persisted', () => {
   const verifyPosition = shell.indexOf('await verifyContractAddress(addressInput)')
   const persistPosition = shell.indexOf('setActiveContractAddress(verified.address)')

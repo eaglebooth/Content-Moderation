@@ -176,10 +176,21 @@ class GenLayerClient {
   }
 
   async connectWallet() {
-    if (!window.ethereum) throw new Error('Wallet provider not found')
+    if (!window.ethereum) throw new Error('Wallet provider not found. Open this app in a browser with MetaMask or a GenLayer-compatible wallet installed.')
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts', params: [] }) as string[]
     this.account = accounts?.[0] || ''
-    return Boolean(this.account)
+    if (!this.account) return false
+
+    // Connecting at wallet-selection time makes the required Studionet switch
+    // visible to the user instead of deferring it until the first write.
+    const walletClient = createClient({
+      chain: chainMap[network],
+      ...(endpoint ? { endpoint } : {}),
+      provider: window.ethereum,
+      account: this.account as `0x${string}`,
+    }) as unknown as RuntimeClient
+    if (walletClient.connect) await walletClient.connect(network)
+    return true
   }
 
   private async read(functionName: string, args: unknown[] = []) {
