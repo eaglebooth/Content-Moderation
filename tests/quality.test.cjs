@@ -6,6 +6,8 @@ const test = require('node:test')
 const root = path.join(__dirname, '..')
 const contract = fs.readFileSync(path.join(root, 'contracts/ContentModeration.py'), 'utf-8')
 const client = fs.readFileSync(path.join(root, 'lib/genlayer-client.ts'), 'utf-8')
+const shell = fs.readFileSync(path.join(root, 'components/AppShell.tsx'), 'utf-8')
+const submitPage = fs.readFileSync(path.join(root, 'app/app/submit/page.tsx'), 'utf-8')
 
 test('contract has the pinned Studio runtime header', () => {
   const lines = contract.split(/\r?\n/)
@@ -40,6 +42,13 @@ test('contract exposes complete review and appeal lifecycle', () => {
   }
 })
 
+test('malformed AI output degrades to manual review instead of failing the transaction', () => {
+  assert(contract.includes('cleaned.find("{")'))
+  assert(contract.includes('cleaned.rfind("}")'))
+  assert(contract.includes('The validator output was not valid JSON'))
+  assert(!contract.includes('return "INVALID_AI_RESPONSE"'))
+})
+
 test('contract uses deterministic transaction time and no nonexistent block API', () => {
   assert(contract.includes('gl.message_raw["datetime"]'))
   assert(contract.includes('def _transaction_timestamp'))
@@ -62,6 +71,22 @@ test('frontend uses the GenLayer SDK and native Studio chain', () => {
   assert(client.includes('getTransaction'))
   assert(client.includes('stateEventuallyMatches'))
   assert(client.includes('setActiveContractAddress'))
+  assert(client.includes('verifyContractAddress'))
+  assert(client.includes('content-moderation-contract-address-v2'))
+  assert(client.includes('leader_receipt'))
   assert(client.includes('localStorage'))
   assert(!client.includes('TransactionStatus.FINALIZED'))
+})
+
+test('reviewer contract overrides are verified before they are persisted', () => {
+  const verifyPosition = shell.indexOf('await verifyContractAddress(addressInput)')
+  const persistPosition = shell.indexOf('setActiveContractAddress(verified.address)')
+  assert(verifyPosition >= 0)
+  assert(persistPosition > verifyPosition)
+})
+
+test('submit page uses the verified one-wei demo bond and validates it locally', () => {
+  assert(submitPage.includes("useState('0.000000000000000001')"))
+  assert(submitPage.includes('if (bondWei <= 0n)'))
+  assert(submitPage.includes('Submission accepted and verified on-chain'))
 })

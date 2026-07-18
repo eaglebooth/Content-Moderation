@@ -38,18 +38,19 @@ async function main() {
         const value = await check()
         if (value) return value
       } catch { /* The accepted state may take another RPC poll to become readable. */ }
-      await sleep(2_000)
+      await sleep(10_000)
     }
     throw new Error(`Timed out verifying ${label}`)
   }
 
   async function write(functionName, args = [], value = 0n) {
     const hash = await client.writeContract({ address: contractAddress, functionName, args, value })
+    console.log(`${functionName} submitted: ${hash}`)
     const receipt = await client.waitForTransactionReceipt({
       hash,
       status: TransactionStatus.ACCEPTED,
-      interval: 2_000,
-      retries: 180,
+      interval: 10_000,
+      retries: 90,
       fullTransaction: false,
     })
     let transaction = receipt
@@ -59,6 +60,7 @@ async function main() {
     if (transaction.txExecutionResultName === 'FINISHED_WITH_ERROR') {
       throw new Error(`${functionName} failed on-chain (${hash})`)
     }
+    console.log(`${functionName} accepted: ${hash}`)
     return hash
   }
 

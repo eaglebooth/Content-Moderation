@@ -79,14 +79,21 @@ class ContentModeration(gl.Contract):
         return u256(seconds)
 
     def _parse_review(self, raw: str) -> typing.Any:
+        cleaned = raw.strip()
+        object_start = cleaned.find("{")
+        object_end = cleaned.rfind("}")
+        if object_start >= 0 and object_end > object_start:
+            cleaned = cleaned[object_start:object_end + 1]
         try:
-            data = json.loads(raw)
+            data = json.loads(cleaned)
             verdict = str(data.get("verdict", "NEEDS_REVIEW")).upper()
             score = int(data.get("risk_score", 50))
             category_scores = json.dumps(data.get("category_scores", {}), sort_keys=True, separators=(",", ":"))[:700]
             reason = str(data.get("reason", "The jury returned no usable reason."))[:900]
         except Exception:
-            return None
+            # Malformed model output must not strand a payable submission. The
+            # conservative outcome preserves the bond and routes it to review.
+            return ("NEEDS_REVIEW", 50, "{}", "The validator output was not valid JSON, so the bond remains locked for manual review.")
         if verdict not in ("APPROVED", "REJECTED", "NEEDS_REVIEW"):
             verdict = "NEEDS_REVIEW"
         if score < 0:
@@ -164,8 +171,6 @@ Assess context and evidence, not isolated keywords. APPROVED means risk 0-35 wit
 
         principle = "Validators must agree on the fund-controlling moderation outcome and a compatible risk band. Wording and exact category values may differ, but APPROVED, REJECTED, and NEEDS_REVIEW are not equivalent. The reason must rely on compatible evidence and policy concerns."
         parsed = self._parse_review(gl.eq_principle.prompt_comparative(run_review, principle))
-        if parsed is None:
-            return "INVALID_AI_RESPONSE"
         verdict, score_value, category_scores, reason = parsed
         score = u256(score_value)
         if verdict == "APPROVED" and score <= u256(35):
@@ -242,8 +247,6 @@ Reconsider the complete record. APPROVED requires risk 0-35, REJECTED requires r
 
         principle = "Appeal validators must agree on the same final bond outcome and compatible risk band after considering both original and new public evidence. Different wording is acceptable; disagreement between approval, rejection, and unresolved review is not."
         parsed = self._parse_review(gl.eq_principle.prompt_comparative(run_appeal, principle))
-        if parsed is None:
-            return "INVALID_AI_RESPONSE"
         verdict, score_value, category_scores, reason = parsed
         score = u256(score_value)
         if verdict == "APPROVED" and score <= u256(35):

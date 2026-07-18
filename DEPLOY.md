@@ -3,7 +3,7 @@
 ## Current State
 
 - Network: GenLayer Studio (`studionet`)
-- Contract: `0x991272C07158e7cC526233Dee29F765D75163461`
+- Contract: `0x981Ad492F0Cc733A16bb2C81d56E7c0c13d9E6eE`
 - Frontend: approved for GitHub and Vercel deployment
 - Previous V1 address: incompatible and removed from runtime configuration
 
@@ -22,7 +22,7 @@ Test this sequence after deploying `contracts/ContentModeration.py`:
 After all checks pass, set:
 
 ```env
-NEXT_PUBLIC_CONTRACT_ADDRESS=0x991272C07158e7cC526233Dee29F765D75163461
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x981Ad492F0Cc733A16bb2C81d56E7c0c13d9E6eE
 NEXT_PUBLIC_NETWORK=studionet
 NEXT_PUBLIC_GENLAYER_RPC=
 ```

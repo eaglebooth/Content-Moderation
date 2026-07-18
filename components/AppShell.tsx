@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { AppSidebar } from './AppSidebar'
-import { getContractConfig, getGenLayerClient, restoreDefaultContractAddress, setActiveContractAddress } from '@/lib/genlayer-client'
+import { getContractConfig, getGenLayerClient, restoreDefaultContractAddress, setActiveContractAddress, verifyContractAddress } from '@/lib/genlayer-client'
 
 interface AppShellProps {
   children: React.ReactNode
@@ -67,11 +67,11 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
 
   async function handleUseContract() {
     try {
-      const address = setActiveContractAddress(addressInput)
+      setWalletStatus('Verifying selected contract...')
+      const verified = await verifyContractAddress(addressInput)
+      const address = setActiveContractAddress(verified.address)
       setConfig(getContractConfig())
-      setWalletStatus('Reading selected contract...')
-      const state = await getGenLayerClient().getSystemState()
-      setWalletStatus(`Verified ${address.slice(0, 6)}...${address.slice(-4)}: ${state.submission_count.toString()} submissions`)
+      setWalletStatus(`Verified ${address.slice(0, 6)}...${address.slice(-4)}: ${verified.state.submission_count.toString()} submissions`)
     } catch (error) {
       setWalletStatus(error instanceof Error ? error.message : 'Contract verification failed')
     }

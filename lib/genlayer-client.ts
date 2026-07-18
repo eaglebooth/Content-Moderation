@@ -14,7 +14,9 @@ declare global {
 const network: NetworkName = process.env.NEXT_PUBLIC_NETWORK === 'localnet' ? 'localnet' : 'studionet'
 const endpoint = process.env.NEXT_PUBLIC_GENLAYER_RPC
 const chainMap = { localnet, studionet }
-const contractStorageKey = 'content-moderation-contract-address'
+// Version the override so a stale address saved by an older release cannot
+// silently redirect reviewer transactions away from the production contract.
+const contractStorageKey = 'content-moderation-contract-address-v2'
 
 type RuntimeClient = {
   connect?: (networkName: NetworkName) => Promise<unknown>
@@ -28,7 +30,10 @@ type ReceiptLike = {
   statusName?: string
   txExecutionResultName?: string
   txDataDecoded?: unknown
-  consensus_data?: { validators?: Array<{ genvm_result?: { execution_result?: string; stderr?: string } }> }
+  consensus_data?: {
+    leader_receipt?: Array<{ result?: { payload?: { readable?: string } } }>
+    validators?: Array<{ genvm_result?: { execution_result?: string; stderr?: string } }>
+  }
 }
 
 export type ModerationStatus = 'PENDING' | 'APPROVED' | 'REJECTED_APPEALABLE' | 'NEEDS_REVIEW' | 'APPEAL_PENDING' | 'FINAL_APPROVED' | 'FINAL_REJECTED' | 'MANUAL_REVIEW'
@@ -73,6 +78,22 @@ export interface TransactionResult {
 const delay = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds))
 
 function receiptFailure(receipt: ReceiptLike): string | null {
+  const readable = receipt.consensus_data?.leader_receipt?.[0]?.result?.payload?.readable
+  if (readable) {
+    try {
+      const contractResult = JSON.parse(readable)
+      const errorCodes = [
+        'INVALID_', 'SUBMISSION_', 'NOT_', 'MODERATION_BOND_',
+        'APPEAL_ALREADY_', 'APPEAL_WINDOW_', 'REJECTION_', 'BOND_',
+      ]
+      if (typeof contractResult === 'string' && errorCodes.some((prefix) => contractResult.startsWith(prefix))) {
+        return `Contract rejected the request: ${contractResult}.`
+      }
+    } catch {
+      // Older SDK receipts may expose a non-JSON readable value.
+    }
+  }
+
   const executions = receipt.consensus_data?.validators
     ?.map((validator) => validator.genvm_result)
     .filter((execution) => Boolean(execution?.execution_result)) || []
@@ -170,7 +191,7 @@ class GenLayerClient {
   private async stateEventuallyMatches(check: () => Promise<boolean>) {
     for (let attempt = 0; attempt < 12; attempt += 1) {
       try { if (await check()) return true } catch { /* State may lag the accepted receipt briefly. */ }
-      await delay(2_000)
+      await delay(5_000)
     }
     return false
   }
@@ -192,7 +213,7 @@ class GenLayerClient {
       const receipt = await runtime.waitForTransactionReceipt({
         hash: hash as `0x${string}`,
         status: TransactionStatus.ACCEPTED,
-        interval: 2_000,
+        interval: 5_000,
         retries: 120,
         fullTransaction: false,
       })
@@ -225,7 +246,11 @@ class GenLayerClient {
           }
         } catch { /* Preserve the original SDK error when monitoring is unavailable. */ }
       }
-      return { success: false, error: error instanceof Error ? error.message : 'Transaction failed' }
+      return {
+        success: false,
+        hash: submittedHash || undefined,
+        error: error instanceof Error ? error.message : 'Transaction failed',
+      }
     }
   }
 
@@ -294,6 +319,14 @@ export function setActiveContractAddress(address: string) {
   if (typeof window !== 'undefined') window.localStorage.setItem(contractStorageKey, normalized)
   instance = new GenLayerClient(normalized)
   return normalized
+}
+
+export async function verifyContractAddress(address: string) {
+  const normalized = address.trim()
+  if (!/^0x[a-fA-F0-9]{40}$/.test(normalized)) throw new Error('Enter a valid GenLayer contract address')
+  const candidate = new GenLayerClient(normalized)
+  const state = await candidate.getSystemState()
+  return { address: normalized, state }
 }
 
 export function restoreDefaultContractAddress() {

@@ -8,7 +8,7 @@ Pitch: this protocol dies without GenLayer because real funds depend on a subjec
 
 - App: https://content-moderation-zeta.vercel.app/
 - Repository: https://github.com/eaglebooth/Content-Moderation
-- ContentModeration V2: `0x991272C07158e7cC526233Dee29F765D75163461`
+- ContentModeration V2: `0x981Ad492F0Cc733A16bb2C81d56E7c0c13d9E6eE`
 - Network: GenLayer Studio (`studionet`)
 - Verified payable lifecycle: [`RELEASE_EVIDENCE.md`](RELEASE_EVIDENCE.md)
 
@@ -59,7 +59,7 @@ The runtime script never prints the private key and the repository does not stor
 Configure `.env.local` after redeployment:
 
 ```env
-NEXT_PUBLIC_CONTRACT_ADDRESS=0x991272C07158e7cC526233Dee29F765D75163461
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x981Ad492F0Cc733A16bb2C81d56E7c0c13d9E6eE
 NEXT_PUBLIC_NETWORK=studionet
 NEXT_PUBLIC_GENLAYER_RPC=
 ```
