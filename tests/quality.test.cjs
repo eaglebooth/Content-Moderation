@@ -8,6 +8,7 @@ const contract = fs.readFileSync(path.join(root, 'contracts/ContentModeration.py
 const client = fs.readFileSync(path.join(root, 'lib/genlayer-client.ts'), 'utf-8')
 const shell = fs.readFileSync(path.join(root, 'components/AppShell.tsx'), 'utf-8')
 const submitPage = fs.readFileSync(path.join(root, 'app/app/submit/page.tsx'), 'utf-8')
+const dashboard = fs.readFileSync(path.join(root, 'app/app/page.tsx'), 'utf-8')
 
 test('contract has the pinned Studio runtime header', () => {
   const lines = contract.split(/\r?\n/)
@@ -84,6 +85,14 @@ test('wallet connection switches to Studionet and exposes connection feedback', 
   assert(shell.includes("Opening wallet and switching to Studionet..."))
   assert(shell.includes('aria-live="polite"'))
   assert(!shell.includes('hidden max-w-[180px]'))
+})
+
+test('temporary Studionet rate limits are retried without duplicating dashboard state reads', () => {
+  assert(client.includes('isRetryableRpcError'))
+  assert(client.includes('Studionet RPC is temporarily rate-limited'))
+  assert(client.includes('getSubmissions(knownState?: SystemState)'))
+  assert(dashboard.includes('getSubmissions(liveState)'))
+  assert(dashboard.includes('Reading the on-chain queue...'))
 })
 
 test('reviewer contract overrides are verified before they are persisted', () => {

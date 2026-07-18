@@ -77,6 +77,12 @@ export interface TransactionResult {
 
 const delay = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds))
 
+function isRetryableRpcError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error)
+  return ['Failed to fetch', '429', 'Too Many Requests', 'Server busy', 'fetch failed']
+    .some((fragment) => message.toLowerCase().includes(fragment.toLowerCase()))
+}
+
 function receiptFailure(receipt: ReceiptLike): string | null {
   const readable = receipt.consensus_data?.leader_receipt?.[0]?.result?.payload?.readable
   if (readable) {
@@ -195,8 +201,19 @@ class GenLayerClient {
 
   private async read(functionName: string, args: unknown[] = []) {
     if (!this.address) throw new Error('ContentModeration V2 contract is not configured')
-    const data = await (this.readClient as unknown as RuntimeClient).readContract({ address: this.address, functionName, args })
-    return parseJson(data)
+    const delays = [1_500, 3_000, 6_000, 10_000]
+    for (let attempt = 0; attempt <= delays.length; attempt += 1) {
+      try {
+        const data = await (this.readClient as unknown as RuntimeClient).readContract({ address: this.address, functionName, args })
+        return parseJson(data)
+      } catch (error) {
+        if (!isRetryableRpcError(error) || attempt === delays.length) {
+          if (isRetryableRpcError(error)) throw new Error('Studionet RPC is temporarily rate-limited. Wait 20 seconds, then use Sync contract or Refresh without resubmitting.')
+          throw error
+        }
+        await delay(delays[attempt])
+      }
+    }
   }
 
   private async stateEventuallyMatches(check: () => Promise<boolean>) {
@@ -298,8 +315,8 @@ class GenLayerClient {
   async getSystemState() { return normalizeSystemState(await this.read('get_system_state')) }
   async getGuidelines() { return parseJson(await this.read('get_guidelines')) }
 
-  async getSubmissions() {
-    const state = await this.getSystemState()
+  async getSubmissions(knownState?: SystemState) {
+    const state = knownState || await this.getSystemState()
     const items: Submission[] = []
     for (let id = Number(state.submission_count) - 1; id >= 0; id -= 1) {
       try { items.push(await this.getSubmission(id)) } catch { /* A missing row must not hide the remaining queue. */ }
